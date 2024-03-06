@@ -47,7 +47,7 @@ class Crazyflie(VecTask):
         num_observations = 18
         num_actions = 4
         
-        bodies_per_env = 1
+        bodies_per_env = 1+360
         
         self.cfg["env"]["numObservations"] = num_observations
         self.cfg["env"]["numActions"] = num_actions
@@ -55,13 +55,18 @@ class Crazyflie(VecTask):
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
         
         self.root_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
-        vec_root_tensor = gymtorch.wrap_tensor(self.root_tensor).view(self.num_envs, 1, 13)
+        vec_root_tensor = gymtorch.wrap_tensor(self.root_tensor).view(self.num_envs, 361, 13)
         
-        self.root_states = vec_root_tensor
+        self.root_states = vec_root_tensor[:, 0, :]
         self.root_positions = self.root_states[:, 0:3] #  (0,0,1) is the initial position
         self.root_quats = self.root_states[:, 3:7]
         self.root_linvels = self.root_states[:, 7:10]
         self.root_angvels = self.root_states[:, 10:13]
+        
+        self.target_root_positions = torch.zeros((self.num_envs,360, 3), device=self.device, dtype=torch.float32)
+        self.target_root_positions[:, :,2] = 1
+        self.marker_states = vec_root_tensor[:, 1:361, :]
+        self.marker_positions = self.marker_states[:,:, 0:3]
         
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.initial_root_states = self.root_states.clone()
@@ -136,6 +141,19 @@ class Crazyflie(VecTask):
             # create env instance
             env = self.gym.create_env(self.sim, lower, upper, num_per_row)
             actor_handle = self.gym.create_actor(env, asset, default_pose_drone, "crazyflie", i, 1, 1)
+            
+            for theta in range(0, 360, 1):
+                theta_rad = np.radians(theta)
+                r = 0.5
+                x = r*np.cos(theta_rad)-0.5
+                y = r*np.sin(theta_rad)
+                default_pose_marker = gymapi.Transform()
+                default_pose_marker.p.z = 1.0
+                default_pose_marker.p.x = x
+                default_pose_marker.p.y = y
+                marker_handle = self.gym.create_actor(env, marker_asset, default_pose_marker, "marker", i+theta, 1, 1)
+                self.gym.set_rigid_body_color(env, marker_handle, 0, gymapi.MESH_VISUAL_AND_COLLISION, gymapi.Vec3(1, 0, 0))
+            
             self.actor_handles.append(actor_handle)
             self.envs.append(env)
         
@@ -255,10 +273,25 @@ class Crazyflie(VecTask):
 def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, root_linvels, root_angvels, reset_buf, progress_buf, max_episode_length):
     # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float) -> Tuple[Tensor, Tensor]
     
+    # 
+    distances = torch.norm(target_root_positions.unsqueeze(0) - root_positions.unsqueeze(1), dim=-1)
+    # print("target_root_positions: ", target_root_positions)
+    # print("root_positions: ", root_positions)
+    # print("distances: ", distances.size())
+
+    # 
+    closest_node_index = torch.argmin(distances,dim=2)
+    
+    # print("closest_node_index: ", closest_node_index.size())
+    # print("target_root_positions: ", target_root_positions.size())
+    
+    index = closest_node_index.squeeze()
+    nearest_node = target_root_positions[torch.arange(100), index]
+    # print("target_root_positions: ", target_root_positions)
+    # print("near node: ",target_root_positions[0,0,:])
+    # print("nearest_node: ", nearest_node)
     # distance to target
-    target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
-                             root_positions[..., 1] * root_positions[..., 1] +
-                             (1 - root_positions[..., 2]) * (1 - root_positions[..., 2]))
+    target_dist = torch.sqrt(torch.square(nearest_node - root_positions).sum(-1))
     pos_reward = 1.0 / (1.0 + target_dist * target_dist)
 
     # uprightness
@@ -274,7 +307,7 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
 
     # combined reward
     # uprigness and spinning only matter when close to the target
-    reward = pos_reward #+ pos_reward * (up_reward + spinnage_reward)
+    reward = pos_reward + pos_reward * (up_reward + spinnage_reward)
     # print("reward: ", reward)
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)

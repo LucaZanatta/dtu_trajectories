@@ -6,13 +6,13 @@ import numpy as np
 def generate_circle_points(num_points):
     t = np.linspace(0, 2*np.pi, num_points)
     radius = 0.5 
-    x = radius*np.cos(t) - radius
+    x = radius*np.cos(t) + radius
     y = radius*np.sin(t)
     z = np.ones_like(t)
     return x, y, z
 
 
-def save_to_csv(x, y, z, filename='circle.csv'):
+def save_to_csv(x, y, z, filename='isaacgymenvs/tasks/trajectory/circle.csv'):
     with open(filename, mode='w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['X', 'Y', 'Z'])

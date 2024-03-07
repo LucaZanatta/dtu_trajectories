@@ -197,7 +197,7 @@ class Crazyflie(VecTask):
         # apply actions
         self.gym.apply_rigid_body_force_tensors(self.sim, gymtorch.unwrap_tensor(self.forces), None, gymapi.LOCAL_SPACE)
         
-        # super().pre_physics_step(_actions)
+        super().pre_physics_step(_actions)
         
 
     def post_physics_step(self):

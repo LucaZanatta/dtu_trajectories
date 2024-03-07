@@ -314,11 +314,16 @@ class Quadcopter(VecTask):
         thrust_action_speed_scale = 200
         self.thrusts += self.dt * thrust_action_speed_scale * actions[:, 8:12]
         self.thrusts[:] = tensor_clamp(self.thrusts, self.thrust_lower_limits, self.thrust_upper_limits)
+        
+        
 
         self.forces[:, 2, 2] = self.thrusts[:, 0]
         self.forces[:, 4, 2] = self.thrusts[:, 1]
         self.forces[:, 6, 2] = self.thrusts[:, 2]
         self.forces[:, 8, 2] = self.thrusts[:, 3]
+        
+        print("self.thrusts: ", self.thrusts)
+        print("self.forces: ", self.forces)
 
         # clear actions for reset envs
         self.thrusts[reset_env_ids] = 0.0

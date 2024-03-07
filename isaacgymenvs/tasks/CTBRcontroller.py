@@ -1,5 +1,5 @@
 import torch
-
+# from isaacgymenvs.utils.torch_jit_utils 
 
 
 class CTRBctrl():
@@ -55,7 +55,7 @@ class CTRBctrl():
         
         # Compute error term
         self.error[:] = actions[:, 0:3] - self.body_drone_angvels
-        print("actions in ctbr: ", actions[:, 0:3])
+        # print("actions in ctbr: ", actions[:, 0:3])
             
         ### PX4 controller: Compute the control action
         ## Proportional term
@@ -64,8 +64,8 @@ class CTRBctrl():
 
         ## Feedback linearization term
         fb_lin = torch.zeros_like(prop)
-        print("self.J: ", self.J)
-        print("self.body_drone_angvels: ", self.body_drone_angvels)
+        # print("self.J: ", self.J)
+        # print("self.body_drone_angvels: ", self.body_drone_angvels)
         # fb_lin[:] = torch.cross(self.body_drone_angvels , torch.bmm(self.J, torch.unsqueeze(self.body_drone_angvels, dim=2)).squeeze(), dim=1)
         fb_lin[:] = torch.cross(self.body_drone_angvels , torch.bmm(self.J, torch.unsqueeze(self.body_drone_angvels,dim=2)).squeeze(), dim=1)
 
@@ -120,7 +120,7 @@ class CTRBctrl():
             torch.bmm(q_vec.view(shape[0], 1, 3), v.view(
                 shape[0], 3, 1)).squeeze(-1) * 2.0
             
-        # return a+b+c # I guess this function might return a+b+c
+        return a-b+c
 
 
 if __name__ == "__main__":

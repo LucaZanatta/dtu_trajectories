@@ -26,6 +26,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# CTBR added 
+
 import math
 import numpy as np
 import os
@@ -81,6 +83,9 @@ class Crazyflie(VecTask):
         self.forces = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device, requires_grad=False)
 
         self.all_actor_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).reshape((self.num_envs, 2))
+        
+        self.controller = CTRBctrl(self.num_envs, device=self.device)
+        self.friction = torch.zeros((self.num_envs, bodies_per_env, 3), device=self.device, dtype=torch.float32)
 
         if self.viewer:
             cam_pos = gymapi.Vec3(0, 0, 1.5)
@@ -210,7 +215,7 @@ class Crazyflie(VecTask):
         
         return torch.unique(torch.cat([target_actor_indices, actor_indices]))
         
-    def pre_physics_step(self, _actions,bodies_per_env=2):
+    def pre_physics_step(self, _actions):
 
         # resets
         set_target_ids = (self.progress_buf % 500 == 0).nonzero(as_tuple=False).squeeze(-1)
@@ -248,28 +253,29 @@ class Crazyflie(VecTask):
         # self.forces[:, 0, 2] = self.thrusts[:, 2]
         # self.forces[:, 1, 0] = self.thrusts[:, 3]
         
-        print("self.thrusts: ", self.thrusts)
-        print("self.root_quats: ", self.root_quats)
-        print("self.root_linvels: ", self.root_linvels)
-        print("self.root_angvels: ", self.root_angvels)
+        # print("self.thrusts: ", self.thrusts)
+        # print("self.root_quats: ", self.root_quats)
+        # print("self.root_linvels: ", self.root_linvels)
+        # print("self.root_angvels: ", self.root_angvels)
         
         ######################
-        controller = CTRBctrl(self.num_envs, device=self.device)
-        friction = torch.zeros((self.num_envs, bodies_per_env, 3), device=self.device, dtype=torch.float32)
+        
 
-        total_torque, common_thrust = controller.update(actions, 
+        total_torque, common_thrust = self.controller.update(actions, 
                                                         self.root_quats, 
                                                         self.root_linvels, 
                                                         self.root_angvels)
     
         # Compute Friction forces (opposite to drone vels)
-        friction[:, :, :] = -0.02*torch.sign(self.root_linvels)*self.root_linvels**2
+        self.friction[:, 0, :] = -0.02*torch.sign(self.root_linvels)*self.root_linvels**2
         print("total_torque: ", total_torque)
         print("common_thrust: ", common_thrust)
-        print("friction: ", friction)
+        print("friction: ", self.friction)
         
         
-        self.forces = common_thrust + friction
+        self.forces = common_thrust + self.friction
+        
+        print("forces: ", self.forces)
         
         
         

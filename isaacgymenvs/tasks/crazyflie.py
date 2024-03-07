@@ -55,13 +55,13 @@ class Crazyflie(VecTask):
         super().__init__(config=self.cfg, rl_device=rl_device, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless, virtual_screen_capture=virtual_screen_capture, force_render=force_render)
         
         self.root_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
-        vec_root_tensor = gymtorch.wrap_tensor(self.root_tensor).view(self.num_envs, 1, 13)
+        vec_root_tensor = gymtorch.wrap_tensor(self.root_tensor).view(self.num_envs, 13)
         
         self.root_states = vec_root_tensor
-        self.root_positions = self.root_states[:, 0:3] #  (0,0,1) is the initial position
-        self.root_quats = self.root_states[:, 3:7]
-        self.root_linvels = self.root_states[:, 7:10]
-        self.root_angvels = self.root_states[:, 10:13]
+        self.root_positions = self.root_states[..., 0:3] #  (0,0,1) is the initial position
+        self.root_quats = self.root_states[..., 3:7]
+        self.root_linvels = self.root_states[..., 7:10]
+        self.root_angvels = self.root_states[..., 10:13]
         
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.initial_root_states = self.root_states.clone()
@@ -77,7 +77,7 @@ class Crazyflie(VecTask):
 
         # control tensors
         self.thrusts = torch.zeros((self.num_envs, 4), dtype=torch.float32, device=self.device, requires_grad=False)
-        self.forces = torch.zeros((self.num_envs, 361, 4), dtype=torch.float32, device=self.device, requires_grad=False)
+        self.forces = torch.zeros((self.num_envs, bodies_per_env, 4), dtype=torch.float32, device=self.device, requires_grad=False)
 
         self.all_actor_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).reshape((self.num_envs, 2))
 
@@ -123,9 +123,6 @@ class Crazyflie(VecTask):
         asset_options.angular_damping = 0.0
         asset_options.max_angular_velocity = 4 * math.pi # 4
         asset = self.gym.load_asset(self.sim, asset_root, asset_file, asset_options)
-        
-        asset_options.fix_base_link = True
-        marker_asset = self.gym.create_sphere(self.sim, 0.005, asset_options)
         
         default_pose_drone = gymapi.Transform()
         default_pose_drone.p.z = 1.0 # set the initial height of the copter (0,0,1)
@@ -173,8 +170,9 @@ class Crazyflie(VecTask):
         actions = _actions.to(self.device)
         
         thrust_action_speed_scale = 200 # 200
-
+        
         self.thrusts += self.dt * thrust_action_speed_scale * actions
+        print("self.thrusts: ", self.thrusts)
         self.thrusts[:] = tensor_clamp(self.thrusts, self.thrust_lower_limits, self.thrust_upper_limits)
 
         # self.forces[:,0,0] = self.thrusts[:,0]
@@ -258,7 +256,7 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
     # distance to target
     target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
                              root_positions[..., 1] * root_positions[..., 1] +
-                             (1 - root_positions[..., 2]) * (1 - root_positions[..., 2]))
+                             (2 - root_positions[..., 2]) * (1 - root_positions[..., 2]))
     pos_reward = 1.0 / (1.0 + target_dist * target_dist)
 
     # uprightness

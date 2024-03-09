@@ -64,7 +64,7 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
 #                         rl_device="cuda:0",
 #                         graphics_device_id=0,
 #                         headless=True)
-env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 2) # num_envs = 1000
+env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 500) # num_envs = 1000
 
 env = wrap_env(env)
 
@@ -122,7 +122,7 @@ agent = PPO(models=models,
 
 
 # configure and instantiate the RL trainer
-cfg_trainer = {"timesteps":5000, "headless": True}
+cfg_trainer = {"timesteps":50000, "headless": True}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training

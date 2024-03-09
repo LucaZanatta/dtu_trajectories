@@ -135,6 +135,9 @@ class Crazyflie(VecTask):
         
         default_pose = gymapi.Transform()
         default_pose.p.z = 1.0
+        
+        marker_pose = gymapi.Transform()
+        marker_pose.p.z = 1.0
 
         self.envs = []
         self.actor_handles = []
@@ -143,7 +146,7 @@ class Crazyflie(VecTask):
             env = self.gym.create_env(self.sim, lower, upper, num_per_row)
             actor_handle = self.gym.create_actor(env, asset, default_pose, "crazyflie", i, 1, 1)
             
-            marker_handle = self.gym.create_actor(env, marker_asset, default_pose, "marker", i, 1, 1)
+            marker_handle = self.gym.create_actor(env, marker_asset, marker_pose, "marker", i, 1, 1)
             self.gym.set_rigid_body_color(env, marker_handle, 0, gymapi.MESH_VISUAL_AND_COLLISION, gymapi.Vec3(1, 0, 0))
             
 
@@ -160,27 +163,6 @@ class Crazyflie(VecTask):
                 self.rotor_env_offsets[i, ..., 2] = env_origin.z
     
     
-        
-    def set_targets(self, env_ids):
-        
-        num_sets = len(env_ids)
-        # set target positions in a circle shape
-        radius = 5.0
-        angle_increment = 2 * math.pi / num_sets
-        for i, env_id in enumerate(env_ids):
-            angle = i * angle_increment
-            x = radius * math.cos(angle)
-            y = radius * math.sin(angle)
-            self.target_root_positions[env_id, 0] = x
-            self.target_root_positions[env_id, 1] = y
-            self.target_root_positions[env_id, 2] = 1.0
-        
-        self.marker_positions[env_ids] = self.target_root_positions[env_ids]
-        actor_indices = self.all_actor_indices[env_ids, 1].flatten()
-
-        return actor_indices
-    
-    
     def set_targets(self, env_ids):
         
         num_sets = len(env_ids)
@@ -188,8 +170,8 @@ class Crazyflie(VecTask):
         # self.target_root_positions[env_ids, 0:2] = (torch.rand(num_sets, 2, device=self.device)) 
         # self.target_root_positions[env_ids, 2] = torch.rand(num_sets, device=self.device)
         
-        self.target_root_positions[env_ids, 0:2] = (torch.rand(num_sets, 2, device=self.device)*0.001) 
-        self.target_root_positions[env_ids, 2] = (torch.rand(num_sets, device=self.device)*0.01)+1
+        self.target_root_positions[env_ids, 0:2] = (torch.rand(num_sets, 2, device=self.device)*0.0001) + 0.5
+        self.target_root_positions[env_ids, 2] = (torch.rand(num_sets, device=self.device)*0.0001)+ 1.2
         
         self.marker_positions[env_ids] = self.target_root_positions[env_ids]
         # copter "position" is at the bottom of the legs, so shift the target up so it visually aligns better
@@ -218,7 +200,7 @@ class Crazyflie(VecTask):
     def pre_physics_step(self, _actions):
 
         # resets
-        set_target_ids = (self.progress_buf % 500 == 0).nonzero(as_tuple=False).squeeze(-1)
+        set_target_ids = (self.progress_buf % 1000 == 0).nonzero(as_tuple=False).squeeze(-1)
         target_actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
         if len(set_target_ids) > 0:
             target_actor_indices = self.set_targets(set_target_ids)
@@ -235,58 +217,39 @@ class Crazyflie(VecTask):
         actions = _actions.to(self.device)
         
         thrust_action_speed_scale = 200 # 200
-        
 
-        print("actions: ", actions)
-        print("self.thrusts: ", self.thrusts)
-        # print("tensor size: ", actions.size())
-        self.thrusts += self.dt * thrust_action_speed_scale * actions
-        self.thrusts[:] = tensor_clamp(self.thrusts, self.thrust_lower_limits, self.thrust_upper_limits)
-
-        # print("self.thrusts: ", self.thrusts)
-
-        # print("self.forces: ", self.forces)
-        # print("tensor size: ", self.forces.size())
-
-        # self.forces[:, 0, 0] = self.thrusts[:, 0]
-        # self.forces[:, 0, 1] = self.thrusts[:, 1]
-        # self.forces[:, 0, 2] = self.thrusts[:, 2]
-        # self.forces[:, 1, 0] = self.thrusts[:, 3]
-        
-        # print("self.thrusts: ", self.thrusts)
-        # print("self.root_quats: ", self.root_quats)
-        # print("self.root_linvels: ", self.root_linvels)
-        # print("self.root_angvels: ", self.root_angvels)
-        
         ######################
-        
-
+        # CTBR added
         total_torque, common_thrust = self.controller.update(actions, 
                                                         self.root_quats, 
                                                         self.root_linvels, 
                                                         self.root_angvels)
-    
         # Compute Friction forces (opposite to drone vels)
+        # print("########### print start #############")
         self.friction[:, 0, :] = -0.02*torch.sign(self.root_linvels)*self.root_linvels**2
-        print("total_torque: ", total_torque)
-        print("common_thrust: ", common_thrust)
-        print("friction: ", self.friction)
+        # print("total_torque: ", total_torque)
+        expanded_total_torque = total_torque.repeat(2, 1)
+        # print("adjusted_torque: ", expanded_total_torque)
+        # print("common_thrust: ", common_thrust)
+        # print("friction: ", self.friction)
         
+        friction_shape = self.friction.shape
+        expanded_common_thrust = common_thrust.unsqueeze(1).unsqueeze(2).expand(friction_shape)
+        # print("common_thrust_expanded: ", expanded_common_thrust)
         
-        self.forces = common_thrust + self.friction
+        self.forces = expanded_common_thrust + self.friction # RuntimeError: The size of tensor a (2) must match the size of tensor b (3) at non-singleton dimension 2
         
-        print("forces: ", self.forces)
-        
-        
-        
+        # print("forces: ", self.forces)
+        self.forces = self.forces.reshape(-1, self.forces.shape[-1])
+        # print("forces: ", self.forces)
+        # print("########### print end #############")
         # clear actions for reset envs
-        self.thrusts[reset_env_ids] = 0.0
         self.forces[reset_env_ids] = 0.0
 
         # Apply forces and torques to the drone
         self.gym.apply_rigid_body_force_tensors( self.sim, 
                                             gymtorch.unwrap_tensor(self.forces), 
-                                            gymtorch.unwrap_tensor(total_torque),
+                                            gymtorch.unwrap_tensor(expanded_total_torque),
                                             gymapi.LOCAL_SPACE)
     
         ######################
@@ -371,7 +334,7 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
-    die = torch.where(target_dist > 0.5, ones, die)
+    die = torch.where(target_dist > 5, ones, die)
     die = torch.where(root_positions[..., 2] < 0.3, ones, die)
 
     # resets due to episode length

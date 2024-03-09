@@ -238,49 +238,23 @@ class Crazyflie(VecTask):
         
 
         print("actions: ", actions)
-        print("self.thrusts: ", self.thrusts)
-        # print("tensor size: ", actions.size())
-        self.thrusts += self.dt * thrust_action_speed_scale * actions
-        self.thrusts[:] = tensor_clamp(self.thrusts, self.thrust_lower_limits, self.thrust_upper_limits)
-
-        # print("self.thrusts: ", self.thrusts)
-
-        # print("self.forces: ", self.forces)
-        # print("tensor size: ", self.forces.size())
-
-        # self.forces[:, 0, 0] = self.thrusts[:, 0]
-        # self.forces[:, 0, 1] = self.thrusts[:, 1]
-        # self.forces[:, 0, 2] = self.thrusts[:, 2]
-        # self.forces[:, 1, 0] = self.thrusts[:, 3]
-        
-        # print("self.thrusts: ", self.thrusts)
-        # print("self.root_quats: ", self.root_quats)
-        # print("self.root_linvels: ", self.root_linvels)
-        # print("self.root_angvels: ", self.root_angvels)
-        
         ######################
-        
-
+        # CTBR added
         total_torque, common_thrust = self.controller.update(actions, 
                                                         self.root_quats, 
                                                         self.root_linvels, 
                                                         self.root_angvels)
-    
         # Compute Friction forces (opposite to drone vels)
         self.friction[:, 0, :] = -0.02*torch.sign(self.root_linvels)*self.root_linvels**2
         print("total_torque: ", total_torque)
         print("common_thrust: ", common_thrust)
         print("friction: ", self.friction)
-        
-        
-        self.forces = common_thrust + self.friction
+                
+        self.forces = common_thrust + self.friction # RuntimeError: The size of tensor a (2) must match the size of tensor b (3) at non-singleton dimension 2
         
         print("forces: ", self.forces)
         
-        
-        
         # clear actions for reset envs
-        self.thrusts[reset_env_ids] = 0.0
         self.forces[reset_env_ids] = 0.0
 
         # Apply forces and torques to the drone

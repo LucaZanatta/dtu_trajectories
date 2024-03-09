@@ -280,9 +280,7 @@ class Quadcopter(VecTask):
     def reset_idx(self, env_ids):
 
         num_resets = len(env_ids)
-
         self.dof_states[env_ids] = self.initial_dof_states[env_ids]
-
         actor_indices = self.all_actor_indices[env_ids].flatten()
 
         self.root_states[env_ids] = self.initial_root_states[env_ids]
@@ -337,7 +335,6 @@ class Quadcopter(VecTask):
     def post_physics_step(self):
 
         self.progress_buf += 1
-
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
 

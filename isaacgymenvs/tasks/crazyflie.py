@@ -47,7 +47,7 @@ class Crazyflie(VecTask):
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
         
         num_observations = 18
-        num_actions = 12
+        num_actions = 4
         
         bodies_per_env = 1
         
@@ -64,6 +64,9 @@ class Crazyflie(VecTask):
         self.root_quats = self.root_states[:, 3:7]
         self.root_linvels = self.root_states[:, 7:10]
         self.root_angvels = self.root_states[:, 10:13]
+        
+        self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
+        self.target_root_positions[:, 2] = 1
         
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.initial_root_states = self.root_states.clone()
@@ -145,28 +148,55 @@ class Crazyflie(VecTask):
                 self.rotor_env_offsets[i, ..., 1] = env_origin.y
                 self.rotor_env_offsets[i, ..., 2] = env_origin.z
         
+    def set_targets(self, env_ids):
+        
+        num_sets = len(env_ids)
+        # set target position randomly with x, y in (-5, 5) and z in (1, 2)
+        # self.target_root_positions[env_ids, 0:2] = (torch.rand(num_sets, 2, device=self.device)) 
+        # self.target_root_positions[env_ids, 2] = torch.rand(num_sets, device=self.device)
+        
+        self.target_root_positions[env_ids, 0:2] = (torch.rand(num_sets, 2, device=self.device)*0.0001) + 0.5
+        self.target_root_positions[env_ids, 2] = (torch.rand(num_sets, device=self.device)*0.0001)+ 1.2
+        # copter "position" is at the bottom of the legs, so shift the target up so it visually aligns better
+        # self.marker_positions[env_ids, 2] += 0.4
+        actor_indices = self.all_actor_indices[env_ids, 1].flatten()
+
+        return actor_indices
+        
     def reset_idx(self, env_ids):
         
         num_resets = len(env_ids)
+        target_actor_indices = self.set_targets(env_ids)
         actor_indices = self.all_actor_indices[env_ids, 0].flatten()
-
-        self.reset_buf = self.reset_buf.to('cuda')
+        
         self.root_states[env_ids] = self.initial_root_states[env_ids]
         self.root_states[env_ids, 0] += torch_rand_float(-0, 0, (num_resets, 1), self.device).flatten()
         self.root_states[env_ids, 1] += torch_rand_float(-0, 0, (num_resets, 1), self.device).flatten()
         self.root_states[env_ids, 2] += torch_rand_float(-0, 0, (num_resets, 1), self.device).flatten()
         self.gym.set_actor_root_state_tensor_indexed(self.sim, self.root_tensor, gymtorch.unwrap_tensor(actor_indices), num_resets)
+
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
         
-                
+        return torch.unique(torch.cat([target_actor_indices, actor_indices]))
+        
     def pre_physics_step(self, _actions):
 
         # resets
+        set_target_ids = (self.progress_buf % 1000 == 0).nonzero(as_tuple=False).squeeze(-1)
+        target_actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
+        if len(set_target_ids) > 0:
+            target_actor_indices = self.set_targets(set_target_ids)
+
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+        actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
         if len(reset_env_ids) > 0:
-            self.reset_idx(reset_env_ids)
-            
+            actor_indices = self.reset_idx(reset_env_ids)
+
+        reset_indices = torch.unique(torch.cat([target_actor_indices, actor_indices]))
+        if len(reset_indices) > 0:
+            self.gym.set_actor_root_state_tensor_indexed(self.sim, self.root_tensor, gymtorch.unwrap_tensor(reset_indices), len(reset_indices))
+           
         actions = _actions.to(self.device)
         thrust_action_speed_scale = 200 # 200
         self.thrusts += self.dt * thrust_action_speed_scale * actions
@@ -267,7 +297,7 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
-    die = torch.where(target_dist > 0.5, ones, die)
+    die = torch.where(target_dist > 5, ones, die)
     die = torch.where(root_positions[..., 2] < 0.3, ones, die)
 
     # resets due to episode length

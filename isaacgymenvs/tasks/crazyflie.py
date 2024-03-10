@@ -177,17 +177,24 @@ class Crazyflie(VecTask):
                                                         self.root_linvels, 
                                                         self.root_angvels)
         self.friction[:, 0, :] = -0.02*torch.sign(self.root_linvels)*self.root_linvels**2
+        
+        print("common_thrust: ", common_thrust.shape)
+        print("common_thrust: ", common_thrust)
+        print("self.friction: ", self.friction.shape)
+        print("self.friction: ", self.friction)
 
         friction_shape = self.friction.shape
         expanded_common_thrust = common_thrust.unsqueeze(1).unsqueeze(2).expand(friction_shape)
-        self.forces = expanded_common_thrust + self.friction # RuntimeError: The size of tensor a (2) must match the size of tensor b (3) at non-singleton dimension 2
+        
+        self.forces = expanded_common_thrust + self.friction 
         self.forces = self.forces.reshape(-1, self.forces.shape[-1])
+        
         # clear actions for reset envs
         self.forces[reset_env_ids] = 0.0
         
         # Apply forces and torques to the drone
         self.gym.apply_rigid_body_force_tensors( self.sim, 
-                                            gymtorch.unwrap_tensor(self.forces), 
+                                            gymtorch.unwrap_tensor(common_thrust), 
                                             gymtorch.unwrap_tensor(total_torque),
                                             gymapi.LOCAL_SPACE)
             

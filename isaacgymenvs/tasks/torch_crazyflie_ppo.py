@@ -61,7 +61,7 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
 #                         rl_device="cuda:0",
 #                         graphics_device_id=0,
 #                         headless=True)
-env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 10000) # num_envs = 1000
+env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 1) # num_envs = 1000
 
 env = wrap_env(env)
 

@@ -42,9 +42,6 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
 
     def act(self, inputs, role):
         if role == "policy":
-        
-            # print("inputs: ", inputs)
-            # print("role: ", role)
             return GaussianMixin.act(self, inputs, role)
         elif role == "value":
             return DeterministicMixin.act(self, inputs, role)
@@ -64,7 +61,7 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
 #                         rl_device="cuda:0",
 #                         graphics_device_id=0,
 #                         headless=True)
-env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 1) # num_envs = 1000
+env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 10000) # num_envs = 1000
 
 env = wrap_env(env)
 
@@ -137,7 +134,7 @@ trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 # # download the trained agent's checkpoint from Hugging Face Hub and load it
 # # path = download_model_from_huggingface("skrl/IsaacGymEnvs-Quadcopter-PPO", filename="agent.pt")
 
-# path = "isaacgymenvs/runs/Crazyflie/24-02-27_22-20-54-020774_PPO/checkpoints/best_agent.pt"
+# path = "isaacgymenvs/runs/Crazyflie/24-03-10_14-59-53-564305_PPO/checkpoints/best_agent.pt"
 # agent.load(path)
 # trainer.eval()
 trainer.train()

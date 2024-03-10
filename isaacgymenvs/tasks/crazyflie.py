@@ -80,7 +80,7 @@ class Crazyflie(VecTask):
         self.thrusts = torch.zeros((self.num_envs, 4), dtype=torch.float32, device=self.device, requires_grad=False)
         self.forces = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device, requires_grad=False)
 
-        self.all_actor_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).reshape((self.num_envs, 2))
+        self.all_actor_indices = torch.arange(self.num_envs, dtype=torch.int32, device=self.device)
         
         # CTBR added
         self.controller = CTRBctrl(self.num_envs, device=self.device)
@@ -148,26 +148,10 @@ class Crazyflie(VecTask):
                 self.rotor_env_offsets[i, ..., 1] = env_origin.y
                 self.rotor_env_offsets[i, ..., 2] = env_origin.z
         
-    def set_targets(self, env_ids):
-        
-        num_sets = len(env_ids)
-        # set target position randomly with x, y in (-5, 5) and z in (1, 2)
-        # self.target_root_positions[env_ids, 0:2] = (torch.rand(num_sets, 2, device=self.device)) 
-        # self.target_root_positions[env_ids, 2] = torch.rand(num_sets, device=self.device)
-        
-        self.target_root_positions[env_ids, 0:2] = (torch.rand(num_sets, 2, device=self.device)*0.0001) + 0.5
-        self.target_root_positions[env_ids, 2] = (torch.rand(num_sets, device=self.device)*0.0001)+ 1.2
-        # copter "position" is at the bottom of the legs, so shift the target up so it visually aligns better
-        # self.marker_positions[env_ids, 2] += 0.4
-        actor_indices = self.all_actor_indices[env_ids, 1].flatten()
-
-        return actor_indices
-        
     def reset_idx(self, env_ids):
         
         num_resets = len(env_ids)
-        target_actor_indices = self.set_targets(env_ids)
-        actor_indices = self.all_actor_indices[env_ids, 0].flatten()
+        actor_indices = self.all_actor_indices[env_ids].flatten()
         
         self.root_states[env_ids] = self.initial_root_states[env_ids]
         self.root_states[env_ids, 0] += torch_rand_float(-0, 0, (num_resets, 1), self.device).flatten()
@@ -178,41 +162,35 @@ class Crazyflie(VecTask):
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
         
-        return torch.unique(torch.cat([target_actor_indices, actor_indices]))
         
     def pre_physics_step(self, _actions):
 
         # resets
-        set_target_ids = (self.progress_buf % 1000 == 0).nonzero(as_tuple=False).squeeze(-1)
-        target_actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
-        if len(set_target_ids) > 0:
-            target_actor_indices = self.set_targets(set_target_ids)
-
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
-        actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
         if len(reset_env_ids) > 0:
-            actor_indices = self.reset_idx(reset_env_ids)
-
-        reset_indices = torch.unique(torch.cat([target_actor_indices, actor_indices]))
-        if len(reset_indices) > 0:
-            self.gym.set_actor_root_state_tensor_indexed(self.sim, self.root_tensor, gymtorch.unwrap_tensor(reset_indices), len(reset_indices))
-           
+            self.reset_idx(reset_env_ids)  
+            
         actions = _actions.to(self.device)
-        thrust_action_speed_scale = 200 # 200
-        self.thrusts += self.dt * thrust_action_speed_scale * actions
-        self.thrusts[:] = tensor_clamp(self.thrusts, self.thrust_lower_limits, self.thrust_upper_limits)
-        self.forces[:, 0, 0] = self.thrusts[:, 0]
-        self.forces[:, 0, 1] = self.thrusts[:, 1]
-        self.forces[:, 0, 2] = self.thrusts[:, 2]
-        self.forces[:, 1, 0] = self.thrusts[:, 3]
         
+        total_torque, common_thrust = self.controller.update(actions, 
+                                                        self.root_quats, 
+                                                        self.root_linvels, 
+                                                        self.root_angvels)
+        self.friction[:, 0, :] = -0.02*torch.sign(self.root_linvels)*self.root_linvels**2
+
+        friction_shape = self.friction.shape
+        expanded_common_thrust = common_thrust.unsqueeze(1).unsqueeze(2).expand(friction_shape)
+        self.forces = expanded_common_thrust + self.friction # RuntimeError: The size of tensor a (2) must match the size of tensor b (3) at non-singleton dimension 2
+        self.forces = self.forces.reshape(-1, self.forces.shape[-1])
         # clear actions for reset envs
-        self.thrusts[reset_env_ids] = 0.0
         self.forces[reset_env_ids] = 0.0
         
-        # apply actions
-        self.gym.apply_rigid_body_force_tensors(self.sim, gymtorch.unwrap_tensor(self.forces), None, gymapi.LOCAL_SPACE)
-        
+        # Apply forces and torques to the drone
+        self.gym.apply_rigid_body_force_tensors( self.sim, 
+                                            gymtorch.unwrap_tensor(self.forces), 
+                                            gymtorch.unwrap_tensor(total_torque),
+                                            gymapi.LOCAL_SPACE)
+            
         
 
     def post_physics_step(self):
@@ -250,7 +228,6 @@ class Crazyflie(VecTask):
         self.obs_buf[..., 3:7] = self.root_quats
         self.obs_buf[..., 7:10] = self.root_linvels / 2
         self.obs_buf[..., 10:13] = self.root_angvels / math.pi
-        self.obs_buf[..., 13:21] = self.dof_positions
         return self.obs_buf
     
     def compute_reward(self):
@@ -277,7 +254,7 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
     
     target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
                              root_positions[..., 1] * root_positions[..., 1] +
-                             (1.2 - root_positions[..., 2]) * (1.2 - root_positions[..., 2]))
+                             (1.3 - root_positions[..., 2]) * (1.3 - root_positions[..., 2]))
     pos_reward = 1.0 / (1.0 + target_dist * target_dist)
 
 
@@ -292,12 +269,12 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
 
     # combined reward
     # uprigness and spinning only matter when close to the target
-    reward = pos_reward  + pos_reward * (up_reward + spinnage_reward)
+    reward = pos_reward  #+ pos_reward * (up_reward + spinnage_reward)
 
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
-    die = torch.where(target_dist > 5, ones, die)
+    die = torch.where(target_dist > 1, ones, die)
     die = torch.where(root_positions[..., 2] < 0.3, ones, die)
 
     # resets due to episode length

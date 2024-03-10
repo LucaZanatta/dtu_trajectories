@@ -55,7 +55,6 @@ class CTRBctrl():
         
         # Compute error term
         self.error[:] = actions[:, 0:3] - self.body_drone_angvels
-        # print("actions in ctbr: ", actions[:, 0:3])
             
         ### PX4 controller: Compute the control action
         ## Proportional term
@@ -64,10 +63,8 @@ class CTRBctrl():
 
         ## Feedback linearization term
         fb_lin = torch.zeros_like(prop)
-        # print("self.J: ", self.J)
-        # print("self.body_drone_angvels: ", self.body_drone_angvels)
-        # fb_lin[:] = torch.cross(self.body_drone_angvels , torch.bmm(self.J, torch.unsqueeze(self.body_drone_angvels, dim=2)).squeeze(), dim=1)
-        fb_lin[:] = torch.cross(self.body_drone_angvels , torch.bmm(self.J, torch.unsqueeze(self.body_drone_angvels,dim=2)).squeeze(), dim=1)
+        fb_lin[:] = torch.cross(self.body_drone_angvels , torch.bmm(self.J, torch.unsqueeze(self.body_drone_angvels, dim=2)).squeeze(), dim=1)
+        # fb_lin[:] = torch.cross(self.body_drone_angvels , torch.bmm(self.J, torch.unsqueeze(self.body_drone_angvels,dim=2)).squeeze().unsqueeze(0), dim=1)
 
         ## Overall control action
         self.tau_des[:] = prop + fb_lin

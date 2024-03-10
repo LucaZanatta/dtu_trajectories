@@ -63,7 +63,9 @@ class CTRBctrl():
 
         ## Feedback linearization term
         fb_lin = torch.zeros_like(prop)
+        # if num_envs > 1:
         # fb_lin[:] = torch.cross(self.body_drone_angvels , torch.bmm(self.J, torch.unsqueeze(self.body_drone_angvels, dim=2)).squeeze(), dim=1)
+        # if num_envs = 1:
         fb_lin[:] = torch.cross(self.body_drone_angvels , torch.bmm(self.J, torch.unsqueeze(self.body_drone_angvels,dim=2)).squeeze().unsqueeze(0), dim=1)
 
         ## Overall control action

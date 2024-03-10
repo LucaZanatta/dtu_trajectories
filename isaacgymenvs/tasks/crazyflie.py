@@ -185,6 +185,7 @@ class Crazyflie(VecTask):
 
         friction_shape = self.friction.shape
         expanded_common_thrust = common_thrust.unsqueeze(1).unsqueeze(2).expand(friction_shape)
+        print("expanded_common_thrust: ", expanded_common_thrust)
         
         self.forces = expanded_common_thrust + self.friction 
         self.forces = self.forces.reshape(-1, self.forces.shape[-1])
@@ -194,7 +195,7 @@ class Crazyflie(VecTask):
         
         # Apply forces and torques to the drone
         self.gym.apply_rigid_body_force_tensors( self.sim, 
-                                            gymtorch.unwrap_tensor(common_thrust), 
+                                            gymtorch.unwrap_tensor(self.forces), 
                                             gymtorch.unwrap_tensor(total_torque),
                                             gymapi.LOCAL_SPACE)
             

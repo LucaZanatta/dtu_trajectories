@@ -88,19 +88,19 @@ cfg["learning_epochs"] = 8 # 8
 cfg["mini_batches"] = 4  # 8 * 8192 / 16384 = 4
 cfg["discount_factor"] = 0.99 # 0.99
 cfg["lambda"] = 0.95
-cfg["learning_rate"] = 1e-3
+cfg["learning_rate"] = 5e-4 # 1e-3
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
 cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.016}
 cfg["random_timesteps"] = 0
 cfg["learning_starts"] = 0
 cfg["grad_norm_clip"] = 1.0
-cfg["ratio_clip"] = 0.3
+cfg["ratio_clip"] = 0.2
 cfg["value_clip"] = 0.2
 cfg["clip_predicted_values"] = True
 cfg["entropy_loss_scale"] = 0.0
 cfg["value_loss_scale"] = 1.0
 cfg["kl_threshold"] = 0
-cfg["rewards_shaper"] = lambda rewards, timestep, timesteps: rewards*0.1
+cfg["rewards_shaper"] = lambda rewards, timestep, timesteps: rewards
 cfg["state_preprocessor"] = RunningStandardScaler
 cfg["state_preprocessor_kwargs"] = {"size": env.observation_space, "device": device}
 cfg["value_preprocessor"] = RunningStandardScaler
@@ -119,7 +119,7 @@ agent = PPO(models=models,
 
 
 # configure and instantiate the RL trainer
-cfg_trainer = {"timesteps":10000, "headless": True}
+cfg_trainer = {"timesteps":50000, "headless": True}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training
@@ -134,7 +134,7 @@ trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 # # download the trained agent's checkpoint from Hugging Face Hub and load it
 # # path = download_model_from_huggingface("skrl/IsaacGymEnvs-Quadcopter-PPO", filename="agent.pt")
 
-path = "isaacgymenvs/runs/Crazyflie/24-03-12_14-17-10-875894_PPO/checkpoints/best_agent.pt"
+path = "isaacgymenvs/runs/Crazyflie/24-03-12_15-34-29-464247_PPO/checkpoints/best_agent.pt"
 agent.load(path)
 trainer.eval()
 # trainer.train()

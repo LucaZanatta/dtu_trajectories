@@ -251,10 +251,10 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
     # target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
     # pos_reward = 1.0 / (1.0 + target_dist * target_dist)
     
-    target_dist = torch.sqrt((0.2 - root_positions[..., 0]) * (0.2-root_positions[..., 0]) +
-                             (0.2-root_positions[..., 1]) * (0.2 - root_positions[..., 1]) +
-                             (1.3 - root_positions[..., 2]) * (1.3 - root_positions[..., 2]))
-    pos_reward = 1.0 / (1.0 + target_dist * target_dist)
+    target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
+                             root_positions[..., 1] * root_positions[..., 1] +
+                             (2 - root_positions[..., 2]) * (2 - root_positions[..., 2]))
+    pos_reward = 10.0 / (1.0 + target_dist * target_dist)
 
 
     # uprightness

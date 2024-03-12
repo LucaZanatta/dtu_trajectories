@@ -130,7 +130,7 @@ class Crazyflie(VecTask):
         asset = self.gym.load_asset(self.sim, asset_root, asset_file, asset_options)
         
         default_pose = gymapi.Transform()
-        default_pose.p.z = 0.5 # set initial height to 0.5
+        default_pose.p.z = 1 # set initial height to 0.5
 
         self.envs = []
         for i in range(self.num_envs):

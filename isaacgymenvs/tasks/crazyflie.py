@@ -176,23 +176,10 @@ class Crazyflie(VecTask):
                                                         self.root_quats, 
                                                         self.root_linvels, 
                                                         self.root_angvels)
-        self.friction[:, 0, :] = -0.02*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2
-        
-        # print("common_thrust: ", common_thrust.shape)
-        # print("common_thrust: ", common_thrust)
-        # print("self.friction: ", self.friction.shape)
-        # print("self.friction: ", self.friction)
-
-        friction_shape = self.friction.shape
-        # expanded_common_thrust = common_thrust.unsqueeze(1).unsqueeze(2).expand(friction_shape)
-        # print("expanded_common_thrust: ", expanded_common_thrust)
-        
-        
+        self.friction[:, 0, :] = -0.02*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2       
         self.forces[:,0,2] = common_thrust
         self.forces[:,0,:] += self.friction[:,0,:]
-        # self.forces[:] = self.forces.reshape(-1, self.forces.shape[-1])
-        # print("self.forces: ", self.forces.shape)
-        # print("self.forces: ", self.forces)
+
         # clear actions for reset envs
         self.forces[reset_env_ids] = 0.0
         

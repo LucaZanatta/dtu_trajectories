@@ -61,7 +61,7 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
 #                         rl_device="cuda:0",
 #                         graphics_device_id=0,
 #                         headless=True)
-env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 1000) # num_envs = 1000
+env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 1) # num_envs = 1000
 
 env = wrap_env(env)
 
@@ -100,7 +100,7 @@ cfg["clip_predicted_values"] = True
 cfg["entropy_loss_scale"] = 0.0
 cfg["value_loss_scale"] = 1.0
 cfg["kl_threshold"] = 0
-cfg["rewards_shaper"] = lambda rewards, timestep, timesteps: rewards * 0.1
+cfg["rewards_shaper"] = lambda rewards, timestep, timesteps: rewards
 cfg["state_preprocessor"] = RunningStandardScaler
 cfg["state_preprocessor_kwargs"] = {"size": env.observation_space, "device": device}
 cfg["value_preprocessor"] = RunningStandardScaler

@@ -188,7 +188,6 @@ class Crazyflie(VecTask):
                                             gymtorch.unwrap_tensor(self.forces), 
                                             gymtorch.unwrap_tensor(total_torque),
                                             gymapi.LOCAL_SPACE)
-            
         
 
     def post_physics_step(self):

@@ -36,7 +36,7 @@ from isaacgymenvs.utils.torch_jit_utils import *
 from .base.vec_task import VecTask
 from CTBRcontroller import CTRBctrl
 import torch
-
+import pandas as pd
 
 
 class Crazyflie(VecTask):
@@ -64,9 +64,7 @@ class Crazyflie(VecTask):
         self.root_quats = self.root_states[:, 3:7]
         self.root_linvels = self.root_states[:, 7:10]
         self.root_angvels = self.root_states[:, 10:13]
-        
-        self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
-        self.target_root_positions[:, 2] = 1
+
         
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.initial_root_states = self.root_states.clone()
@@ -86,6 +84,21 @@ class Crazyflie(VecTask):
         self.controller = CTRBctrl(self.num_envs, device=self.device)
         self.friction = torch.zeros((self.num_envs, bodies_per_env, 3), device=self.device, dtype=torch.float32)
 
+        # trajectory
+        # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
+        # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xy.csv')
+        # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xyz.csv')
+        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
+        # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle.csv')
+        # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle_plus.csv')
+        # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/helix.csv')
+                
+        # taret index for envs
+        self.target_index = torch.zeros((self.num_envs, 1), device=self.device, dtype=torch.int32)
+        self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
+        self.target_root_positions[:, 2] = 1
+        self.reset_target = torch.ones(self.num_envs, device=self.device, dtype=torch.long)
+        
         if self.viewer:
             cam_pos = gymapi.Vec3(1.0, 1.0, 1.8)
             cam_target = gymapi.Vec3(2.2, 2.0, 1.0)
@@ -152,6 +165,7 @@ class Crazyflie(VecTask):
         
     def reset_idx(self, env_ids):
         
+        # print("env_ids: ", env_ids)
         num_resets = len(env_ids)
         actor_indices = self.all_actor_indices[env_ids].flatten()
         
@@ -164,6 +178,29 @@ class Crazyflie(VecTask):
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
         
+    def set_targets(self,env_ids):
+
+        self.target_index[env_ids] += 1
+        # print("target_index: ", self.target_index)
+        idx = self.target_index.cpu().numpy()
+        print("env_ids: ", env_ids)
+        print("idx: ", idx)
+        for i in env_ids:
+            print("i: ", i)
+            if self.target_index[i] == (len(self.trajectory.iloc[:, 0])-1):
+                self.target_root_positions[i,0] = torch.from_numpy(self.trajectory.iloc[:, 0][-1].values).float().to(self.target_root_positions.device)
+                self.target_root_positions[i,1] = torch.from_numpy(self.trajectory.iloc[:, 1][-1].values).float().to(self.target_root_positions.device)
+                self.target_root_positions[i,2] = torch.from_numpy(self.trajectory.iloc[:, 2][-1].values).float().to(self.target_root_positions.device)
+
+            else:
+                self.target_root_positions[i,0] = torch.from_numpy(self.trajectory.iloc[:, 0][idx[i]].values).float().to(self.target_root_positions.device)
+                self.target_root_positions[i,1] = torch.from_numpy(self.trajectory.iloc[:, 1][idx[i]].values).float().to(self.target_root_positions.device)
+                self.target_root_positions[i,2] = torch.from_numpy(self.trajectory.iloc[:, 2][idx[i]].values).float().to(self.target_root_positions.device)
+            # self.target_root_positions[env_ids,0] = self.trajectory.iloc[:, 0][i] # x coordinate for target
+            # self.target_root_positions[env_ids,1] = self.trajectory.iloc[:, 1][i] # y coordinate for target
+            # self.target_root_positions[env_ids,2] = self.trajectory.iloc[:, 2][i] # z coordinate for target
+            
+        self.reset_target[env_ids] = 0
         
     def pre_physics_step(self, _actions):
 
@@ -172,6 +209,11 @@ class Crazyflie(VecTask):
         if len(reset_env_ids) > 0:
             self.reset_idx(reset_env_ids)  
             
+        # set targets
+        reset_env_ids_target = self.reset_target.nonzero(as_tuple=False).squeeze(-1)
+        if len(reset_env_ids_target) > 0:
+            self.set_targets(reset_env_ids_target)
+        
         actions = _actions.to(self.device)
         
         total_torque, common_thrust = self.controller.update(actions, 
@@ -193,6 +235,7 @@ class Crazyflie(VecTask):
         
 
     def post_physics_step(self):
+        
         
         self.progress_buf += 1
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -230,31 +273,34 @@ class Crazyflie(VecTask):
         return self.obs_buf
     
     def compute_reward(self):
-        self.rew_buf[:], self.reset_buf[:] = compute_crazyflie_reward(
+        self.rew_buf[:], self.reset_buf[:], self.reset_target[:] = compute_crazyflie_reward(
             self.root_positions,
             self.target_root_positions,
             self.root_quats,
             self.root_linvels,
             self.root_angvels,
-            self.reset_buf, self.progress_buf, self.max_episode_length
+            self.reset_buf, self.progress_buf, self.max_episode_length,
+            self.reset_target
         )
         
+  
         
 #####################################################################
 ###=========================jit functions=========================###
  
 @torch.jit.script
-def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, root_linvels, root_angvels, reset_buf, progress_buf, max_episode_length):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float) -> Tuple[Tensor, Tensor]
+def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, root_linvels, root_angvels, reset_buf, progress_buf, max_episode_length,reset_target):
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor) -> Tuple[Tensor, Tensor, Tensor]
 
     # distance to target
-    # target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
-    # pos_reward = 1.0 / (1.0 + target_dist * target_dist)
+    target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
+    pos_reward = 1.0 / (1.0 + target_dist * target_dist)
     
-    target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
-                             root_positions[..., 1] * root_positions[..., 1] +
-                             (2 - root_positions[..., 2]) * (2 - root_positions[..., 2]))
-    pos_reward = 10.0 / (1.0 + target_dist * target_dist)
+    # target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
+    #                          root_positions[..., 1] * root_positions[..., 1] +
+    #                          (2 - root_positions[..., 2]) * (2 - root_positions[..., 2]))    
+    
+    pos_reward = 1.0 / (1.0 + target_dist * target_dist)
 
 
     # uprightness
@@ -268,15 +314,20 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
 
     # combined reward
     # uprigness and spinning only matter when close to the target
-    reward = pos_reward  + pos_reward * (up_reward + spinnage_reward)
+    reward = pos_reward  #+ pos_reward * (up_reward + spinnage_reward)
 
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
     die = torch.where(target_dist > 2, ones, die)
     die = torch.where(root_positions[..., 2] < 0.3, ones, die)
-
+    
     # resets due to episode length
     reset = torch.where(progress_buf >= max_episode_length - 1, ones, die)
+    
+    # reset target
+    one = torch.ones_like(reset_target)
+    next = torch.zeros_like(reset_target)
+    next = torch.where(target_dist < 0.3, one, reset_target)
 
-    return reward, reset
+    return reward, reset, next

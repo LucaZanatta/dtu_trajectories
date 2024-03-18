@@ -9,6 +9,7 @@ def trajectory_eva(data):
     y_coords = data.iloc[:, 1]
     z_coords = data.iloc[:, 2]
     num_elements = len(z_coords)
+    # print("first x: ", data.iloc[:, 0][0])
     
     
 

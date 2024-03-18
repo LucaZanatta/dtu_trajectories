@@ -134,7 +134,7 @@ trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 # # download the trained agent's checkpoint from Hugging Face Hub and load it
 # # path = download_model_from_huggingface("skrl/IsaacGymEnvs-Quadcopter-PPO", filename="agent.pt")
 
-path = "isaacgymenvs/runs/Crazyflie/24-03-12_15-34-29-464247_PPO/checkpoints/best_agent.pt"
-agent.load(path)
-trainer.eval()
-# trainer.train()
+# path = "isaacgymenvs/runs/Crazyflie/24-03-12_15-34-29-464247_PPO/checkpoints/best_agent.pt"
+# agent.load(path)
+# trainer.eval()
+trainer.train()

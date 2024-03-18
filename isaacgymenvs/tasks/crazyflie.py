@@ -92,6 +92,10 @@ class Crazyflie(VecTask):
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle.csv')
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle_plus.csv')
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/helix.csv')
+        
+        self.x = self.trajectory.iloc[:, 0]
+        self.y = self.trajectory.iloc[:, 1]
+        self.z = self.trajectory.iloc[:, 2]
                 
         # taret index for envs
         self.target_index = torch.zeros((self.num_envs, 1), device=self.device, dtype=torch.int32)
@@ -183,19 +187,20 @@ class Crazyflie(VecTask):
         self.target_index[env_ids] += 1
         # print("target_index: ", self.target_index)
         idx = self.target_index.cpu().numpy()
-        print("env_ids: ", env_ids)
-        print("idx: ", idx)
+        # print("env_ids: ", env_ids)
+        # print("idx: ", idx)
         for i in env_ids:
-            print("i: ", i)
+            # print("i: ", i)
+            print("self.x[-1].values: ", self.x[-1])
             if self.target_index[i] == (len(self.trajectory.iloc[:, 0])-1):
-                self.target_root_positions[i,0] = torch.from_numpy(self.trajectory.iloc[:, 0][-1].values).float().to(self.target_root_positions.device)
-                self.target_root_positions[i,1] = torch.from_numpy(self.trajectory.iloc[:, 1][-1].values).float().to(self.target_root_positions.device)
-                self.target_root_positions[i,2] = torch.from_numpy(self.trajectory.iloc[:, 2][-1].values).float().to(self.target_root_positions.device)
+                self.target_root_positions[i,0] = torch.from_numpy(self.x[-1].values).float().to(self.target_root_positions.device)
+                self.target_root_positions[i,1] = torch.from_numpy(self.y[-1].values).float().to(self.target_root_positions.device)
+                self.target_root_positions[i,2] = torch.from_numpy(self.z[-1].values).float().to(self.target_root_positions.device)
 
             else:
-                self.target_root_positions[i,0] = torch.from_numpy(self.trajectory.iloc[:, 0][idx[i]].values).float().to(self.target_root_positions.device)
-                self.target_root_positions[i,1] = torch.from_numpy(self.trajectory.iloc[:, 1][idx[i]].values).float().to(self.target_root_positions.device)
-                self.target_root_positions[i,2] = torch.from_numpy(self.trajectory.iloc[:, 2][idx[i]].values).float().to(self.target_root_positions.device)
+                self.target_root_positions[i,0] = torch.from_numpy(self.x[idx[i]].values).float().to(self.target_root_positions.device)
+                self.target_root_positions[i,1] = torch.from_numpy(self.y[idx[i]].values).float().to(self.target_root_positions.device)
+                self.target_root_positions[i,2] = torch.from_numpy(self.z[idx[i]].values).float().to(self.target_root_positions.device)
             # self.target_root_positions[env_ids,0] = self.trajectory.iloc[:, 0][i] # x coordinate for target
             # self.target_root_positions[env_ids,1] = self.trajectory.iloc[:, 1][i] # y coordinate for target
             # self.target_root_positions[env_ids,2] = self.trajectory.iloc[:, 2][i] # z coordinate for target

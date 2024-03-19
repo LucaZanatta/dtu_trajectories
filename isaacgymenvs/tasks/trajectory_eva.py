@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-def trajectory_eva(data):
+def trajectory_eva_1(data):
         
     # 提取x、y、z坐标
     x_coords = data.iloc[:, 0]
@@ -10,8 +10,6 @@ def trajectory_eva(data):
     z_coords = data.iloc[:, 2]
     num_elements = len(z_coords)
     # print("first x: ", data.iloc[:, 0][0])
-    
-    
 
     # 计算数据范围
     x_min, x_max = np.min(x_coords), np.max(x_coords)
@@ -60,34 +58,53 @@ def trajectory_eva(data):
     
     return C
 
+def trajectory_eva_1(data):
+    points = data[['x', 'y', 'z']].values
+    num_elements = len(data)
+    vectors = points.diff().dropna()
+    angles = []
+    for i in range(len(vectors) - 1):
+        angle = angle_between_vectors(vectors[i], vectors[i+1])
+        angles.append(angle)
+        ave_angles = np.sum(angles)/num_elements
+    return ave_angles
+    
+# 计算每个相邻向量之间的夹角
+def angle_between_vectors(v1, v2):
+    dot_product = np.dot(v1, v2)
+    norm_v1 = np.linalg.norm(v1)
+    norm_v2 = np.linalg.norm(v2)
+    cos_theta = dot_product / (norm_v1 * norm_v2)
+    angle_radians = np.arccos(np.clip(cos_theta, -1.0, 1.0))
+    return np.degrees(angle_radians)
 
 
 line_x = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
-C_line_x = trajectory_eva(line_x)
+C_line_x = trajectory_eva_1(line_x)
 print("C_line_x: ", C_line_x)
 
 line_xy = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xy.csv')
-C_line_xy = trajectory_eva(line_xy)
+C_line_xy = trajectory_eva_1(line_xy)
 print("C_line_xy: ", C_line_xy)
 
 line_xyz = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xyz.csv')
-C_line_xyz = trajectory_eva(line_xyz)
+C_line_xyz = trajectory_eva_1(line_xyz)
 print("C_line_xyz: ", C_line_xyz)
     
 circle = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
-C_circle = trajectory_eva(circle)
+C_circle = trajectory_eva_1(circle)
 print("C_circle: ", C_circle)
 
 d_circle = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle.csv')
-C_d_circle = trajectory_eva(d_circle)
+C_d_circle = trajectory_eva_1(d_circle)
 print("C_d_circle: ", C_d_circle)
 
 d_circle_plus = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle_plus.csv')
-C_d_circle_plus = trajectory_eva(d_circle_plus)
+C_d_circle_plus = trajectory_eva_1(d_circle_plus)
 print("C_d_circle_plus: ", C_d_circle_plus)
 
 helix = pd.read_csv('isaacgymenvs/tasks/trajectory/helix.csv')
-C_helix = trajectory_eva(helix)
+C_helix = trajectory_eva_1(helix)
 print("C_helix: ", C_helix)
 
 def scale_to_integer_range(values, new_min, new_max):

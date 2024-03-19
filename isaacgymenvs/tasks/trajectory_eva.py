@@ -74,7 +74,7 @@ def trajectory_eva_2(data):
         norm_vector1 = np.linalg.norm(vector1)
         norm_vector2 = np.linalg.norm(vector2)
         angle_rad = np.arccos(dot_product / (norm_vector1 * norm_vector2))
-        angle_deg = np.degrees(angle_rad)+90
+        angle_deg = np.degrees(angle_rad)+180
         evals.append(angle_deg)
     C = sum(evals) / num_elements
     return C
@@ -90,21 +90,21 @@ d_circle_plus = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle_plus.csv')
 helix = pd.read_csv('isaacgymenvs/tasks/trajectory/helix.csv')
 
 
-C_line_x = trajectory_eva_1(line_x)
-C_line_xy = trajectory_eva_1(line_xy)
-C_line_xyz = trajectory_eva_1(line_xyz)
-C_circle = trajectory_eva_1(circle)
-C_d_circle = trajectory_eva_1(d_circle)
-C_d_circle_plus = trajectory_eva_1(d_circle_plus)
-C_helix = trajectory_eva_1(helix)
+# C_line_x = trajectory_eva_1(line_x)
+# C_line_xy = trajectory_eva_1(line_xy)
+# C_line_xyz = trajectory_eva_1(line_xyz)
+# C_circle = trajectory_eva_1(circle)
+# C_d_circle = trajectory_eva_1(d_circle)
+# C_d_circle_plus = trajectory_eva_1(d_circle_plus)
+# C_helix = trajectory_eva_1(helix)
 
-# C_line_x = 0
-# C_line_xy = 0
-# C_line_xyz = 0
-# C_circle = trajectory_eva_2(circle)
-# C_d_circle = trajectory_eva_2(d_circle)
-# C_d_circle_plus = trajectory_eva_2(d_circle_plus)
-# C_helix = trajectory_eva_2(helix)
+C_line_x = 0
+C_line_xy = 0
+C_line_xyz = 0
+C_circle = trajectory_eva_2(circle)
+C_d_circle = trajectory_eva_2(d_circle)
+C_d_circle_plus = trajectory_eva_2(d_circle_plus)
+C_helix = trajectory_eva_2(helix)
 
 print("C_line_x: ", C_line_x)
 print("C_line_xy: ", C_line_xy)

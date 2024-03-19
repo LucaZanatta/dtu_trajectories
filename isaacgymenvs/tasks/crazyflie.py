@@ -302,9 +302,9 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
     
     pos_reward = 5 / (0.00001 + target_dist * target_dist)
 
-    print("target_root_positions: ", target_root_positions)
-    print("root_positions: ", root_positions)
-    print("target_dist: ", target_dist)
+    # print("target_root_positions: ", target_root_positions)
+    # print("root_positions: ", root_positions)
+    # print("target_dist: ", target_dist)
     # uprightness
     ups = quat_axis(root_quats, 2)
     tiltage = torch.abs(1 - ups[..., 2])

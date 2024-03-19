@@ -58,64 +58,69 @@ def trajectory_eva_1(data):
     
     return C
 
-def trajectory_eva_1(data):
-    points = data[['x', 'y', 'z']].values
+def trajectory_eva_2(data):
     num_elements = len(data)
-    vectors = points.diff().dropna()
-    angles = []
-    for i in range(len(vectors) - 1):
-        angle = angle_between_vectors(vectors[i], vectors[i+1])
-        angles.append(angle)
-        ave_angles = np.sum(angles)/num_elements
-    return ave_angles
-    
-# 计算每个相邻向量之间的夹角
-def angle_between_vectors(v1, v2):
-    dot_product = np.dot(v1, v2)
-    norm_v1 = np.linalg.norm(v1)
-    norm_v2 = np.linalg.norm(v2)
-    cos_theta = dot_product / (norm_v1 * norm_v2)
-    angle_radians = np.arccos(np.clip(cos_theta, -1.0, 1.0))
-    return np.degrees(angle_radians)
+    evals = []
+    for i in range(num_elements-2):
+        point1 = data.loc[i, ['X', 'Y', 'Z']]
+        point2 = data.loc[i+1, ['X', 'Y', 'Z']]
+        point3 = data.loc[i+2, ['X', 'Y', 'Z']]
+        vector1 = point2 - point1
+        vector2 = point3 - point2
+        dot_product = np.dot(vector1, vector2)
+        norm_vector1 = np.linalg.norm(vector1)
+        norm_vector2 = np.linalg.norm(vector2)
+        angle_rad = np.arccos(dot_product / (norm_vector1 * norm_vector2))
+        angle_deg = np.degrees(angle_rad)+90
+        evals.append(angle_deg)
+    C = sum(evals) / num_elements
+    return C
+        
 
 
 line_x = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
-C_line_x = trajectory_eva_1(line_x)
-print("C_line_x: ", C_line_x)
-
 line_xy = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xy.csv')
-C_line_xy = trajectory_eva_1(line_xy)
-print("C_line_xy: ", C_line_xy)
-
 line_xyz = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xyz.csv')
-C_line_xyz = trajectory_eva_1(line_xyz)
-print("C_line_xyz: ", C_line_xyz)
-    
 circle = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
-C_circle = trajectory_eva_1(circle)
-print("C_circle: ", C_circle)
-
 d_circle = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle.csv')
-C_d_circle = trajectory_eva_1(d_circle)
-print("C_d_circle: ", C_d_circle)
-
 d_circle_plus = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle_plus.csv')
-C_d_circle_plus = trajectory_eva_1(d_circle_plus)
-print("C_d_circle_plus: ", C_d_circle_plus)
-
 helix = pd.read_csv('isaacgymenvs/tasks/trajectory/helix.csv')
-C_helix = trajectory_eva_1(helix)
+
+
+# C_line_x = trajectory_eva_1(line_x)
+# C_line_xy = trajectory_eva_1(line_xy)
+# C_line_xyz = trajectory_eva_1(line_xyz)
+# C_circle = trajectory_eva_1(circle)
+# C_d_circle = trajectory_eva_1(d_circle)
+# C_d_circle_plus = trajectory_eva_1(d_circle_plus)
+# C_helix = trajectory_eva_1(helix)
+
+C_line_x = 0
+C_line_xy = 0
+C_line_xyz = 0
+C_circle = trajectory_eva_2(circle)
+C_d_circle = trajectory_eva_2(d_circle)
+C_d_circle_plus = trajectory_eva_2(d_circle_plus)
+C_helix = trajectory_eva_2(helix)
+
+print("C_line_x: ", C_line_x)
+print("C_line_xy: ", C_line_xy)
+print("C_line_xyz: ", C_line_xyz)
+print("C_circle: ", C_circle)
+print("C_d_circle: ", C_d_circle)
+print("C_d_circle_plus: ", C_d_circle_plus)
 print("C_helix: ", C_helix)
+
+
+
 
 def scale_to_integer_range(values, new_min, new_max):
     min_original = min(values)
     max_original = max(values)
-
     scaled_values = [
         int((value - min_original) * (new_max - new_min) / (max_original - min_original) + new_min)
         for value in values
     ]
-
     return scaled_values
 
 original_numbers = []
@@ -127,7 +132,7 @@ original_numbers.append(C_d_circle)
 original_numbers.append(C_d_circle_plus)
 original_numbers.append(C_helix)
 
-scaled_values = scale_to_integer_range(original_numbers, 1, 10)
+scaled_values = scale_to_integer_range(original_numbers, 1, 5)
 
 
 # Plotting the bar chart
@@ -137,5 +142,4 @@ plt.ylabel('Complexity (Scaled)')
 plt.title('Complexity of Trajectories')
 plt.xticks(range(len(scaled_values)), ['Line X', 'Line XY', 'Line XYZ', 'Circle', 'D Circle', 'D Circle Plus', 'Helix'], fontsize=8)
 plt.show()
-
 print("scaled_values: ", scaled_values)

@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 def trajectory_eva_1(data):
         
     # 提取x、y、z坐标
@@ -20,12 +21,24 @@ def trajectory_eva_1(data):
     # print("z_min: ", z_min)
     # print("z_max: ", z_max)
     # 计算立方体尺寸
-    cube_size = 0.1
+    cube_size = 0.2
 
     # 计算立方体的边界
     x_edges = np.arange(x_min, x_max + cube_size, cube_size)
     y_edges = np.arange(y_min, y_max + cube_size, cube_size)
     z_edges = np.arange(z_min, z_max + cube_size, cube_size)
+    # Plotting the cube boundaries
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    for x in x_edges:
+        for y in y_edges:
+            for z in z_edges:
+                ax.plot([x, x], [y, y], [z, z], color='red')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+    plt.pause(1)
+    plt.show()
     # print("x_edges: ", x_edges)
     # print("y_edges: ", y_edges)
     # print("z_edges: ", z_edges)
@@ -87,59 +100,59 @@ d_circle_plus = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle_plus.csv')
 helix = pd.read_csv('isaacgymenvs/tasks/trajectory/helix.csv')
 
 
-# C_line_x = trajectory_eva_1(line_x)
-# C_line_xy = trajectory_eva_1(line_xy)
-# C_line_xyz = trajectory_eva_1(line_xyz)
-# C_circle = trajectory_eva_1(circle)
-# C_d_circle = trajectory_eva_1(d_circle)
-# C_d_circle_plus = trajectory_eva_1(d_circle_plus)
-# C_helix = trajectory_eva_1(helix)
+C_line_x = trajectory_eva_1(line_x)
+C_line_xy = trajectory_eva_1(line_xy)
+C_line_xyz = trajectory_eva_1(line_xyz)
+C_circle = trajectory_eva_1(circle)
+C_d_circle = trajectory_eva_1(d_circle)
+C_d_circle_plus = trajectory_eva_1(d_circle_plus)
+C_helix = trajectory_eva_1(helix)
 
-C_line_x = 0
-C_line_xy = 0
-C_line_xyz = 0
-C_circle = trajectory_eva_2(circle)
-C_d_circle = trajectory_eva_2(d_circle)
-C_d_circle_plus = trajectory_eva_2(d_circle_plus)
-C_helix = trajectory_eva_2(helix)
+# C_line_x = 0
+# C_line_xy = 0
+# C_line_xyz = 0
+# C_circle = trajectory_eva_2(circle)
+# C_d_circle = trajectory_eva_2(d_circle)
+# C_d_circle_plus = trajectory_eva_2(d_circle_plus)
+# C_helix = trajectory_eva_2(helix)
 
-print("C_line_x: ", C_line_x)
-print("C_line_xy: ", C_line_xy)
-print("C_line_xyz: ", C_line_xyz)
-print("C_circle: ", C_circle)
-print("C_d_circle: ", C_d_circle)
-print("C_d_circle_plus: ", C_d_circle_plus)
-print("C_helix: ", C_helix)
-
-
+# print("C_line_x: ", C_line_x)
+# print("C_line_xy: ", C_line_xy)
+# print("C_line_xyz: ", C_line_xyz)
+# print("C_circle: ", C_circle)
+# print("C_d_circle: ", C_d_circle)
+# print("C_d_circle_plus: ", C_d_circle_plus)
+# print("C_helix: ", C_helix)
 
 
-def scale_to_integer_range(values, new_min, new_max):
-    min_original = min(values)
-    max_original = max(values)
-    scaled_values = [
-        int((value - min_original) * (new_max - new_min) / (max_original - min_original) + new_min)
-        for value in values
-    ]
-    return scaled_values
 
-original_numbers = []
-original_numbers.append(C_line_x)
-original_numbers.append(C_line_xy)
-original_numbers.append(C_line_xyz)
-original_numbers.append(C_circle)
-original_numbers.append(C_d_circle)
-original_numbers.append(C_d_circle_plus)
-original_numbers.append(C_helix)
 
-scaled_values = scale_to_integer_range(original_numbers, 1, 5)
+# def scale_to_integer_range(values, new_min, new_max):
+#     min_original = min(values)
+#     max_original = max(values)
+#     scaled_values = [
+#         int((value - min_original) * (new_max - new_min) / (max_original - min_original) + new_min)
+#         for value in values
+#     ]
+#     return scaled_values
+
+# original_numbers = []
+# original_numbers.append(C_line_x)
+# original_numbers.append(C_line_xy)
+# original_numbers.append(C_line_xyz)
+# original_numbers.append(C_circle)
+# original_numbers.append(C_d_circle)
+# original_numbers.append(C_d_circle_plus)
+# original_numbers.append(C_helix)
+
+# scaled_values = scale_to_integer_range(original_numbers, 1, 5)
 
 
 # Plotting the bar chart
-plt.bar(range(len(scaled_values)), scaled_values, color=['red', 'blue', 'green', 'orange', 'purple', 'yellow', 'pink'])
-plt.xlabel('Trajectory')
-plt.ylabel('Complexity (Scaled)')
-plt.title('Complexity of Trajectories')
-plt.xticks(range(len(scaled_values)), ['Line X', 'Line XY', 'Line XYZ', 'Circle', 'D Circle', 'D Circle Plus', 'Helix'], fontsize=8)
-plt.show()
-print("scaled_values: ", scaled_values)
+# plt.bar(range(len(scaled_values)), scaled_values, color=['red', 'blue', 'green', 'orange', 'purple', 'yellow', 'pink'])
+# plt.xlabel('Trajectory')
+# plt.ylabel('Complexity (Scaled)')
+# plt.title('Complexity of Trajectories')
+# plt.xticks(range(len(scaled_values)), ['Line X', 'Line XY', 'Line XYZ', 'Circle', 'D Circle', 'D Circle Plus', 'Helix'], fontsize=8)
+# plt.show()
+# print("scaled_values: ", scaled_values)

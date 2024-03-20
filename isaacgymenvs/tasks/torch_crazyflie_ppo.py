@@ -15,7 +15,7 @@ from skrl.trainers.torch import SequentialTrainer
 from skrl.utils import set_seed
 
 # seed for reproducibility
-seed = set_seed(42)  # e.g. `set_seed(42)` for fixed seed
+seed = set_seed()  # e.g. `set_seed(42)` for fixed seed
 
 
 # define shared model (stochastic and deterministic models) using mixins

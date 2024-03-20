@@ -64,15 +64,9 @@ class Crazyflie(VecTask):
         self.root_quats = self.root_states[:, 3:7]
         self.root_linvels = self.root_states[:, 7:10]
         self.root_angvels = self.root_states[:, 10:13]
-
         
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.initial_root_states = self.root_states.clone()
-        
-        # set thrust limits
-        max_thrust = 2
-        self.thrust_lower_limits = torch.zeros(4, device=self.device, dtype=torch.float32)
-        self.thrust_upper_limits = max_thrust * torch.ones(4, device=self.device, dtype=torch.float32)
 
         # control tensors
         self.thrusts = torch.zeros((self.num_envs, 4), dtype=torch.float32, device=self.device, requires_grad=False)
@@ -82,7 +76,7 @@ class Crazyflie(VecTask):
         
         # CTBR added
         self.controller = CTRBctrl(self.num_envs, device=self.device)
-        self.friction = torch.zeros((self.num_envs, bodies_per_env, 3), device=self.device, dtype=torch.float32)
+        self.friction = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device)
 
         # trajectory
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
@@ -92,18 +86,22 @@ class Crazyflie(VecTask):
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle.csv')
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle_plus.csv')
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/helix.csv')
-        
-        self.x = self.trajectory.iloc[:, 0]
-        self.y = self.trajectory.iloc[:, 1]
-        self.z = self.trajectory.iloc[:, 2]
+        coordinates = self.trajectory[['X', 'Y', 'Z']].values
+        self.trajectory = torch.tensor(coordinates, dtype=torch.float32, device=self.device)
+        self.x = self.trajectory[:, 0]
+        self.y = self.trajectory[:, 1]
+        self.z = self.trajectory[:, 2]
         
         self.len_of_traj = len(self.trajectory)
                 
         # taret index for envs
-        self.target_index = torch.zeros((self.num_envs, 1), device=self.device, dtype=torch.int32)
+        
+        self.target_index = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
         self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
-        self.target_root_positions[:,2] = 1
-        self.reset_target = torch.ones(self.num_envs, device=self.device, dtype=torch.long)
+        self.target_root_positions[:,0] = self.x[0]
+        self.target_root_positions[:,1] = self.y[0]
+        self.target_root_positions[:,2] = self.z[0]
+        self.reset_target = torch.ones(self.num_envs, dtype=torch.long, device=self.device)
         
         if self.viewer:
             cam_pos = gymapi.Vec3(1.0, 1.0, 1.8)
@@ -187,21 +185,18 @@ class Crazyflie(VecTask):
         self.set_targets(env_ids)
         
     def set_targets(self,env_ids):
-        
+        # env_ids is the indices of the envs that need to be reset for target
+        # target_index is the index of the target for each env
+
         self.target_index[env_ids] += 1
-        idx = self.target_index.cpu().numpy()
-
-        for i in env_ids:
-            if self.target_index[i] >= (self.len_of_traj-1):
-                self.target_root_positions[i,0] = torch.from_numpy(self.x[self.len_of_traj-1].values).float().to(self.target_root_positions.device)
-                self.target_root_positions[i,1] = torch.from_numpy(self.y[self.len_of_traj-1].values).float().to(self.target_root_positions.device)
-                self.target_root_positions[i,2] = torch.from_numpy(self.z[self.len_of_traj-1].values).float().to(self.target_root_positions.device)
-
-            else:
-                self.target_root_positions[i,0] = torch.from_numpy(self.x[idx[i]].values).float().to(self.target_root_positions.device)
-                self.target_root_positions[i,1] = torch.from_numpy(self.y[idx[i]].values).float().to(self.target_root_positions.device)
-                self.target_root_positions[i,2] = torch.from_numpy(self.z[idx[i]].values).float().to(self.target_root_positions.device)
-
+        self.target_index[self.target_index >= (self.len_of_traj-1)] = self.len_of_traj-1
+        self.target_root_positions[env_ids,0] = self.x[self.target_index[env_ids]]
+        self.target_root_positions[env_ids,1] = self.y[self.target_index[env_ids]]
+        self.target_root_positions[env_ids,2] = self.z[self.target_index[env_ids]]
+        # print("env_ids:",env_ids)
+        # print("target_index:",self.target_index[env_ids])
+        # print("next x:",self.target_root_positions[env_ids,0])
+        
         self.reset_target[env_ids] = 0
         
     def pre_physics_step(self, _actions):
@@ -300,7 +295,8 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
     #                          root_positions[..., 1] * root_positions[..., 1] +
     #                          (2 - root_positions[..., 2]) * (2 - root_positions[..., 2]))    
     
-    pos_reward = 5 / (0.00001 + target_dist * target_dist)
+    pos_reward = 50 / (1 + target_dist * target_dist)**2
+    # print("pos_reward: ", pos_reward)
 
     # print("target_root_positions: ", target_root_positions)
     # print("root_positions: ", root_positions)
@@ -317,11 +313,12 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
     # combined reward
     # uprigness and spinning only matter when close to the target
     reward = pos_reward  #+ pos_reward * (up_reward + spinnage_reward)
+    # print("reward:",reward)
 
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
-    die = torch.where(target_dist > 0.5, ones, die)
+    die = torch.where(target_dist > 2, ones, die)
     die = torch.where(root_positions[..., 2] < 0.5, ones, die)
     
     # resets due to episode length
@@ -331,7 +328,7 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
     # reset target
     one = torch.ones_like(reset_target)
     next = torch.zeros_like(reset_target)
-    next = torch.where(target_dist < 0.2, one, next)
+    next = torch.where(target_dist < 0.8, one, next)
 
     
     return reward, reset, next

@@ -61,7 +61,7 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
 #                         rl_device="cuda:0",
 #                         graphics_device_id=0,
 #                         headless=True)
-env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 3000) # num_envs = 1000
+env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 4000) # num_envs = 1000
 
 env = wrap_env(env)
 
@@ -88,7 +88,7 @@ cfg["learning_epochs"] = 8 # 8
 cfg["mini_batches"] = 4  # 8 * 8192 / 16384 = 4
 cfg["discount_factor"] = 0.99 # 0.99
 cfg["lambda"] = 0.95
-cfg["learning_rate"] = 5e-4 # 1e-3
+cfg["learning_rate"] = 1e-3 # 1e-3
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
 cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.016}
 cfg["random_timesteps"] = 0
@@ -100,7 +100,7 @@ cfg["clip_predicted_values"] = True
 cfg["entropy_loss_scale"] = 0.0
 cfg["value_loss_scale"] = 1.0
 cfg["kl_threshold"] = 0
-cfg["rewards_shaper"] = lambda rewards, timestep, timesteps: rewards
+cfg["rewards_shaper"] = lambda rewards, timestep, timesteps: rewards * 0.1
 cfg["state_preprocessor"] = RunningStandardScaler
 cfg["state_preprocessor_kwargs"] = {"size": env.observation_space, "device": device}
 cfg["value_preprocessor"] = RunningStandardScaler
@@ -119,7 +119,7 @@ agent = PPO(models=models,
 
 
 # configure and instantiate the RL trainer
-cfg_trainer = {"timesteps":5000, "headless": True}
+cfg_trainer = {"timesteps":50000, "headless": True}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training

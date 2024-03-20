@@ -52,7 +52,7 @@ def plot_3d_trajectory(x, y, z):
 
 
 
-num_points = 200
+num_points = 100
 x, y, z = generate_circle_points(num_points)
 
 plot_2d_trajectory(x, y)

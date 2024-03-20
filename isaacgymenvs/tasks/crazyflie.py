@@ -218,41 +218,26 @@ class Crazyflie(VecTask):
             self.reset_idx(reset_env_ids)  
             
         actions = _actions.to(self.device)
-        print("actions: ", actions)
+        # print("actions: ", actions)
         
         # NN and CTBR
-        # total_torque, common_thrust = self.controller.update(actions, 
-        #                                                 self.root_quats, 
-        #                                                 self.root_linvels, 
-        #                                                 self.root_angvels)
-        # self.friction[:, 0, :] = -0.02*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2       
-        # self.forces[:,0,2] = common_thrust
-        # self.forces[:,0,:] += self.friction[:,0,:]
+        total_torque, common_thrust = self.controller.update(actions, 
+                                                        self.root_quats, 
+                                                        self.root_linvels, 
+                                                        self.root_angvels)
+        self.friction[:, 0, :] = -0.02*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2       
+        self.forces[:,0,2] = common_thrust
+        self.forces[:,0,:] += self.friction[:,0,:]
 
-        # # clear actions for reset envs
-        # self.forces[reset_env_ids] = 0.0
-        
-        # # Apply forces and torques to the drone
-        # self.gym.apply_rigid_body_force_tensors( self.sim, 
-        #                                     gymtorch.unwrap_tensor(self.forces), 
-        #                                     gymtorch.unwrap_tensor(total_torque),
-        #                                     gymapi.LOCAL_SPACE)
-        
-        
-        # only NN
-        thrust_action_speed_scale = 200
-        self.thrusts += self.dt * thrust_action_speed_scale * actions
-        self.thrusts[:] = tensor_clamp(self.thrusts, self.thrust_lower_limits, self.thrust_upper_limits)
- 
-        self.forces[:, 0, 0] = self.thrusts[:, 0]
-        self.forces[:, 0, 1] = self.thrusts[:, 1]
-        self.forces[:, 0, 2] = self.thrusts[:, 2]
-        
-        self.thrusts[reset_env_ids] = 0.0
+        # clear actions for reset envs
         self.forces[reset_env_ids] = 0.0
         
-        self.gym.apply_rigid_body_force_tensors(self.sim, gymtorch.unwrap_tensor(self.forces), None, gymapi.LOCAL_SPACE)
-
+        # Apply forces and torques to the drone
+        self.gym.apply_rigid_body_force_tensors( self.sim, 
+                                            gymtorch.unwrap_tensor(self.forces), 
+                                            gymtorch.unwrap_tensor(total_torque),
+                                            gymapi.LOCAL_SPACE)
+        
 
 
     def post_physics_step(self):
@@ -316,11 +301,11 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
     # distance to last target
     
     # distance to target
-    target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
+    # target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
     
-    # target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
-    #                          root_positions[..., 1] * root_positions[..., 1] +
-    #                          (2 - root_positions[..., 2]) * (2 - root_positions[..., 2]))    
+    target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
+                             root_positions[..., 1] * root_positions[..., 1] +
+                             (1.5 - root_positions[..., 2]) * (1.5 - root_positions[..., 2]))    
     
     
     pos_reward = 10 / (0.1 + target_dist * target_dist)

@@ -61,7 +61,7 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
 #                         rl_device="cuda:0",
 #                         graphics_device_id=0,
 #                         headless=True)
-env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 2) # num_envs = 1000
+env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 3) # num_envs = 1000
 
 env = wrap_env(env)
 
@@ -134,7 +134,7 @@ trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 # # download the trained agent's checkpoint from Hugging Face Hub and load it
 # # path = download_model_from_huggingface("skrl/IsaacGymEnvs-Quadcopter-PPO", filename="agent.pt")
 
-# path = "isaacgymenvs/runs/Crazyflie/24-03-20_20-33-09-810198_PPO/checkpoints/best_agent.pt"
-# agent.load(path)
-# trainer.eval()
-trainer.train()
+path = "isaacgymenvs/runs/Crazyflie/24-03-20_22-58-11-158170_PPO/checkpoints/agent_50000.pt"
+agent.load(path)
+trainer.eval()
+# trainer.train()

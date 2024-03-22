@@ -107,6 +107,12 @@ class Crazyflie(VecTask):
         self.target_root_positions[:,0] = self.x[0]
         self.target_root_positions[:,1] = self.y[0]
         self.target_root_positions[:,2] = self.z[0]
+        
+        self.target_next_index = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
+        self.target_next_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
+        self.target_next_positions[:,0] = self.x[1]
+        self.target_next_positions[:,1] = self.y[1]
+        self.target_next_positions[:,2] = self.z[1]
         self.reset_target = torch.ones(self.num_envs, dtype=torch.long, device=self.device)
         
         if self.viewer:
@@ -188,6 +194,7 @@ class Crazyflie(VecTask):
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
         self.target_index[env_ids] = -1
+        self.target_next_index[env_ids] = 0
         self.set_targets(env_ids)
         
     def set_targets(self,env_ids):
@@ -199,6 +206,12 @@ class Crazyflie(VecTask):
         self.target_root_positions[env_ids,0] = self.x[self.target_index[env_ids]]
         self.target_root_positions[env_ids,1] = self.y[self.target_index[env_ids]]
         self.target_root_positions[env_ids,2] = self.z[self.target_index[env_ids]]
+        
+        self.target_next_index[env_ids] = self.target_index[env_ids] + 1
+        self.target_next_index[self.target_next_index >= (self.len_of_traj-1)] = self.len_of_traj-1
+        self.target_next_positions[env_ids,0] = self.x[self.target_index[env_ids]]
+        self.target_next_positions[env_ids,1] = self.y[self.target_index[env_ids]]
+        self.target_next_positions[env_ids,2] = self.z[self.target_index[env_ids]]
         # print("env_ids:",env_ids)
         # print("target_index:",self.target_index[env_ids])
         # print("next x:",self.target_root_positions[env_ids,0])
@@ -228,6 +241,7 @@ class Crazyflie(VecTask):
         self.friction[:, 0, :] = -0.02*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2       
         self.forces[:,0,2] = common_thrust
         self.forces[:,0,:] += self.friction[:,0,:]
+        # print("forces: ", self.forces)
 
         # clear actions for reset envs
         self.forces[reset_env_ids] = 0.0
@@ -282,6 +296,7 @@ class Crazyflie(VecTask):
         self.rew_buf[:], self.reset_buf[:], self.reset_target[:] = compute_crazyflie_reward(
             self.root_positions,
             self.target_root_positions,
+            self.target_next_positions,
             self.root_quats,
             self.root_linvels,
             self.root_angvels,
@@ -295,20 +310,22 @@ class Crazyflie(VecTask):
 ###=========================jit functions=========================###
  
 @torch.jit.script
-def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, root_linvels, root_angvels, reset_buf, progress_buf, max_episode_length,reset_target):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor) -> Tuple[Tensor, Tensor, Tensor]
+def compute_crazyflie_reward(root_positions, target_root_positions, target_next_positions, root_quats, root_linvels, root_angvels, reset_buf, progress_buf, max_episode_length,reset_target):
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor) -> Tuple[Tensor, Tensor, Tensor]
 
     # distance to last target
     
     # distance to target
-    # target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
+    target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
     
-    target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
-                             root_positions[..., 1] * root_positions[..., 1] +
-                             (1.5 - root_positions[..., 2]) * (1.5 - root_positions[..., 2]))    
+    target_dist_next = torch.sqrt(torch.square(target_next_positions - root_positions).sum(-1))
     
+    # target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
+    #                          root_positions[..., 1] * root_positions[..., 1] +
+    #                          (1.3 - root_positions[..., 2]) * (1.3 - root_positions[..., 2]))    
     
-    pos_reward = 10 / (0.1 + target_dist * target_dist)
+    d = 0.5
+    pos_reward = 2*d / (1 + target_dist * target_dist) + d**2 / (1 + target_dist_next * target_dist_next)
     # print("pos_reward: ", pos_reward)
 
     # print("target_root_positions: ", target_root_positions)
@@ -325,14 +342,15 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
 
     # combined reward
     # uprigness and spinning only matter when close to the target
-    reward = pos_reward + pos_reward*spinnage_reward #+ pos_reward * (up_reward + spinnage_reward)
+    reward = pos_reward
+    # reward = pos_reward + pos_reward * (up_reward + spinnage_reward)
     # print("reward:",reward)
 
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
     die = torch.where(target_dist > 2, ones, die)
-    die = torch.where(root_positions[..., 2] < 0.5, ones, die)
+    die = torch.where(root_positions[..., 2] < 0.7, ones, die)
     
     # resets due to episode length
     reset = torch.where(progress_buf >= max_episode_length - 1, ones, die)
@@ -340,7 +358,7 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
     # reset target
     one = torch.ones_like(reset_target)
     next = torch.zeros_like(reset_target)
-    next = torch.where(target_dist < 0.5, one, next)
+    next = torch.where(target_dist < 0.1, one, next)
 
     
     return reward, reset, next

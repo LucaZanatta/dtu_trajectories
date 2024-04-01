@@ -37,18 +37,18 @@ def trajectory_eva_1(data):
             for k in range(counts.shape[2]):
 
                 N = N + counts[i,j,k]
-                # sum = sum + counts[i,j,k]**2
+                sum = sum + counts[i,j,k]**2
                 sum_cube = sum_cube + 1
-                sum = sum + (counts[i,j,k]/(num_elements - cube_size**2))**2
+                # sum = sum + (counts[i,j,k]/(num_elements - cube_size**2))**2
 
-    # C = np.log(sum / (N**2)) / np.log(cube_size)
+    C = np.log(sum / (N**2)) / np.log(cube_size)
     # C = np.log(sum)/np.log(cube_size)
-    C = np.log(sum/N)/np.log(cube_size)
+    # C = np.log(sum/N)/np.log(cube_size)
     # C = sum
     
     return C
 
-def trajectory_eva_2(data):
+def trajectory_eva_3(data):
     num_elements = len(data)
     evals = []
     for i in range(num_elements-2):
@@ -93,11 +93,11 @@ tornado = pd.read_csv('isaacgymenvs/tasks/trajectory/tornado.csv')
 C_line_x = 0
 C_line_xy = 0
 C_line_xyz = 0
-C_circle = trajectory_eva_2(circle)
-C_ouroboros = trajectory_eva_2(ouroboros)
-C_ouroboros_plus = trajectory_eva_2(ouroboros_plus)
-C_spiral_v = trajectory_eva_2(spiral_v)
-C_tornado = trajectory_eva_2(tornado)
+C_circle = trajectory_eva_3(circle)
+C_ouroboros = trajectory_eva_3(ouroboros)
+C_ouroboros_plus = trajectory_eva_3(ouroboros_plus)
+C_spiral_v = trajectory_eva_3(spiral_v)
+C_tornado = trajectory_eva_3(tornado)
 
 print("C_line_x: ", C_line_x)
 print("C_line_xy: ", C_line_xy)

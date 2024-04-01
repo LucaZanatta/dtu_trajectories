@@ -3,16 +3,15 @@ import csv
 import numpy as np
 
 
-def generate_line_xy_points(num_points):
-    t = np.linspace(0, 2, num_points)
-    x = t
-    y = t
+def generate_ouroboros_points(num_points):
+    t = np.linspace(0, 2*np.pi, num_points)
+    x = np.sin(t)*1.5
+    y = np.cos(t) * np.sin(t)
     z = np.ones_like(t)
-    
     return x, y, z
 
 
-def save_to_csv(x, y, z, filename='line_xy.csv'):
+def save_to_csv(x, y, z, filename='ouroboros.csv'):
     with open(filename, mode='w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['X', 'Y', 'Z'])
@@ -44,14 +43,14 @@ def plot_3d_trajectory(x, y, z):
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-    ax.set_title('line xy', fontsize=16)
+    ax.set_title('ouroboros', fontsize=16)
     ax.legend()
-    plt.savefig('isaacgymenvs/tasks/trajectory/figure/line_xy.png', dpi=600)
+    plt.savefig('isaacgymenvs/tasks/trajectory/figure/ouroboros.png', dpi=600)
     plt.show()
 
 
-num_points = 20
-x, y, z = generate_line_xy_points(num_points)
+num_points = 100
+x, y, z = generate_ouroboros_points(num_points)
 
 # plot_2d_trajectory(x, y)
 plot_3d_trajectory(x, y, z)

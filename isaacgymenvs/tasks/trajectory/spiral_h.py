@@ -14,7 +14,7 @@ def generate_spiral_h_points(num_points):
     return x, y, z
 
 
-def save_to_csv(x, y, z, filename='spiral_h.csv'):
+def save_to_csv(x, y, z, filename='isaacgymenvs/tasks/trajectory/spiral_h.csv'):
     with open(filename, mode='w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['X', 'Y', 'Z'])
@@ -48,8 +48,7 @@ def plot_3d_trajectory(x, y, z):
     ax.set_zlabel('Z')
     ax.set_title('spiral h', fontsize=16)
     ax.legend()
-    # plt.savefig('isaacgymenvs/tasks/trajectory/figure/spiral_h.png', dpi=600)
-    plt.savefig('figure/spiral_h.png', dpi=600)
+    plt.savefig('isaacgymenvs/tasks/trajectory/figure/spiral_h.png', dpi=600)
     plt.show()
 
 

@@ -33,7 +33,7 @@ def generate_corss_points():
     return x, y, z
 
 
-def save_to_csv(x, y, z, filename='corss.csv'):
+def save_to_csv(x, y, z, filename='isaacgymenvs/tasks/trajectory/corss.csv'):
     with open(filename, mode='w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['X', 'Y', 'Z'])
@@ -69,7 +69,7 @@ def plot_3d_trajectory(x, y, z):
     ax.set_zlabel('Z')
     ax.set_title('cross', fontsize=16)
     ax.legend()
-    plt.savefig('figure/corss.png', dpi=600)
+    plt.savefig('isaacgymenvs/tasks/trajectory/figure/corss.png', dpi=600)
     plt.show()
 
 x, y, z = generate_corss_points()

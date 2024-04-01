@@ -12,7 +12,7 @@ def generate_ouroboros_plus_points(num_points):
     return x, y, z
 
 
-def save_to_csv(x, y, z, filename='ouroboros_plus.csv'):
+def save_to_csv(x, y, z, filename='isaacgymenvs/tasks/trajectory/ouroboros_plus.csv'):
     with open(filename, mode='w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['X', 'Y', 'Z'])

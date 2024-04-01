@@ -11,7 +11,7 @@ def generate_sin_points(num_points):
     return x, y, z
 
 
-def save_to_csv(x, y, z, filename='sin.csv'):
+def save_to_csv(x, y, z, filename='isaacgymenvs/tasks/trajectory/sin.csv'):
     with open(filename, mode='w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['X', 'Y', 'Z'])
@@ -47,7 +47,7 @@ def plot_3d_trajectory(x, y, z):
     ax.set_zlabel('Z')
     ax.set_title('sin', fontsize=16)
     ax.legend()
-    plt.savefig('figure/sin.png', dpi=600)
+    plt.savefig('isaacgymenvs/tasks/trajectory/figure/sin.png', dpi=600)
     plt.show()
 
 

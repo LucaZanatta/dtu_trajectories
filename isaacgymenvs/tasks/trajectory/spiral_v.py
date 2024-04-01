@@ -15,7 +15,7 @@ def generate_spiral_v_points(num_points):
     return x, y, z
 
 
-def save_to_csv(x, y, z, filename='spiral_v.csv'):
+def save_to_csv(x, y, z, filename='isaacgymenvs/tasks/trajectory/spiral_v.csv'):
     with open(filename, mode='w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['X', 'Y', 'Z'])

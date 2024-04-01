@@ -13,7 +13,7 @@ def generate_ellipse_points(num_points):
     return x, y, z
 
 
-def save_to_csv(x, y, z, filename='ellipse.csv'):
+def save_to_csv(x, y, z, filename='isaacgymenvs/tasks/trajectory/ellipse.csv'):
     with open(filename, mode='w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['X', 'Y', 'Z'])
@@ -47,7 +47,7 @@ def plot_3d_trajectory(x, y, z):
     ax.set_zlabel('Z')
     ax.set_title('ellipse', fontsize=16)
     ax.legend()
-    plt.savefig('figure/ellipse.png', dpi=600)
+    plt.savefig('isaacgymenvs/tasks/trajectory/figure/ellipse.png', dpi=600)
     plt.show()
 
 

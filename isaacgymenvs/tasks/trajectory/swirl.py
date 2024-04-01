@@ -3,7 +3,7 @@ import csv
 import numpy as np
 
 
-def generate_tornado_points(num_points):
+def generate_swirl_points(num_points):
     theta = np.linspace(-4*np.pi, 4*np.pi, num_points)
     r = np.linspace(0, 3 , num_points)
     x = r*np.cos(theta)
@@ -51,7 +51,7 @@ def plot_3d_trajectory(x, y, z):
 
 
 num_points = 70
-x, y, z = generate_tornado_points(num_points)
+x, y, z = generate_swirl_points(num_points)
 
 plot_2d_trajectory(x, y)
 plot_3d_trajectory(x, y, z)

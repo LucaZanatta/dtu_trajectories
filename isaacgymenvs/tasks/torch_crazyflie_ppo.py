@@ -61,7 +61,7 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
 #                         rl_device="cuda:0",
 #                         graphics_device_id=0,
 #                         headless=True)
-env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 50) # num_envs = 5000
+env = load_isaacgym_env_preview4(task_name="Crazyflie", num_envs = 1000) # num_envs = 5000
 
 env = wrap_env(env)
 
@@ -83,12 +83,12 @@ models["value"] = models["policy"]  # same instance: shared model
 # configure and instantiate the agent (visit its documentation to see all the options)
 # https://skrl.readthedocs.io/en/latest/api/agents/ppo.html#configuration-and-hyperparameters
 cfg = PPO_DEFAULT_CONFIG.copy()
-cfg["rollouts"] = 24  # memory_size 8
+cfg["rollouts"] = 16  # memory_size 8
 cfg["learning_epochs"] = 8 # 8
 cfg["mini_batches"] = 4  # 8 * 8192 / 16384 = 4
 cfg["discount_factor"] = 0.99 # 0.99
 cfg["lambda"] = 0.95
-cfg["learning_rate"] = 1e-3 # 1e-3
+cfg["learning_rate"] = 1e-4 # 1e-3
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
 cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.016}
 cfg["random_timesteps"] = 0
@@ -106,8 +106,8 @@ cfg["state_preprocessor_kwargs"] = {"size": env.observation_space, "device": dev
 cfg["value_preprocessor"] = RunningStandardScaler
 cfg["value_preprocessor_kwargs"] = {"size": 1, "device": device}
 # logging to TensorBoard and write checkpoints (in timesteps)
-cfg["experiment"]["write_interval"] = 5000
-cfg["experiment"]["checkpoint_interval"] = 5000
+cfg["experiment"]["write_interval"] = 50000
+cfg["experiment"]["checkpoint_interval"] = 50000
 cfg["experiment"]["directory"] = "isaacgymenvs/runs/Crazyflie"
 
 agent = PPO(models=models,
@@ -119,7 +119,7 @@ agent = PPO(models=models,
 
 
 # configure and instantiate the RL trainer
-cfg_trainer = {"timesteps":50000, "headless": True}
+cfg_trainer = {"timesteps":1000000, "headless": True}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training
@@ -134,7 +134,7 @@ trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 # # download the trained agent's checkpoint from Hugging Face Hub and load it
 # # path = download_model_from_huggingface("skrl/IsaacGymEnvs-Quadcopter-PPO", filename="agent.pt")
 
-path = "isaacgymenvs/runs/Crazyflie/24-03-22_08-50-15-307008_PPO/checkpoints/best_agent.pt"
-agent.load(path)
-trainer.eval()
-# trainer.train()
+# path = "isaacgymenvs/runs/Crazyflie/24-03-22_08-50-15-307008_PPO/checkpoints/best_agent.pt"
+# agent.load(path)
+# trainer.eval()
+trainer.train()

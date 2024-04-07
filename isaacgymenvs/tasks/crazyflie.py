@@ -113,6 +113,13 @@ class Crazyflie(VecTask):
         self.target_next_positions[:,0] = self.x[1]
         self.target_next_positions[:,1] = self.y[1]
         self.target_next_positions[:,2] = self.z[1]
+        
+        self.target_next_next_index = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
+        self.target_next_next_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
+        self.target_next_next_positions[:,0] = self.x[2]
+        self.target_next_next_positions[:,1] = self.y[2]
+        self.target_next_next_positions[:,2] = self.z[2]
+        
         self.reset_target = torch.ones(self.num_envs, dtype=torch.long, device=self.device)
         
         if self.viewer:
@@ -195,6 +202,8 @@ class Crazyflie(VecTask):
         self.progress_buf[env_ids] = 0
         self.target_index[env_ids] = -1
         self.target_next_index[env_ids] = 0
+        self.target_next_next_index[env_ids] = 1
+        # print("###############reset envs########")
         self.set_targets(env_ids)
         
     def set_targets(self,env_ids):
@@ -209,9 +218,16 @@ class Crazyflie(VecTask):
         
         self.target_next_index[env_ids] = self.target_index[env_ids] + 1
         self.target_next_index[self.target_next_index >= (self.len_of_traj-1)] = self.len_of_traj-1
-        self.target_next_positions[env_ids,0] = self.x[self.target_index[env_ids]]
-        self.target_next_positions[env_ids,1] = self.y[self.target_index[env_ids]]
-        self.target_next_positions[env_ids,2] = self.z[self.target_index[env_ids]]
+        self.target_next_positions[env_ids,0] = self.x[self.target_next_index[env_ids]]
+        self.target_next_positions[env_ids,1] = self.y[self.target_next_index[env_ids]]
+        self.target_next_positions[env_ids,2] = self.z[self.target_next_index[env_ids]]
+        
+        self.target_next_next_index[env_ids] = self.target_index[env_ids] + 2
+        self.target_next_next_index[self.target_next_next_index >= (self.len_of_traj-1)] = self.len_of_traj-1
+        self.target_next_next_positions[env_ids,0] = self.x[self.target_next_next_index[env_ids]]
+        self.target_next_next_positions[env_ids,1] = self.y[self.target_next_next_index[env_ids]]
+        self.target_next_next_positions[env_ids,2] = self.z[self.target_next_next_index[env_ids]]
+        
         # print("env_ids:",env_ids)
         # print("target_index:",self.target_index[env_ids])
         # print("next x:",self.target_root_positions[env_ids,0])
@@ -276,8 +292,9 @@ class Crazyflie(VecTask):
             verts = torch.stack([starts, ends], dim=2).cpu().numpy()
             colors = np.zeros((self.num_envs * 4, 3), dtype=np.float32)
             colors[..., 0] = 1.0
-            self.gym.clear_lines(self.viewer)
+            # self.gym.clear_lines(self.viewer)
             self.gym.add_lines(self.viewer, None, self.num_envs * 4, verts, colors)
+            self.gym.draw_viewer(self.viewer)
 
         
     def compute_observations(self):
@@ -297,6 +314,7 @@ class Crazyflie(VecTask):
             self.root_positions,
             self.target_root_positions,
             self.target_next_positions,
+            self.target_next_next_positions,
             self.root_quats,
             self.root_linvels,
             self.root_angvels,
@@ -310,26 +328,28 @@ class Crazyflie(VecTask):
 ###=========================jit functions=========================###
  
 @torch.jit.script
-def compute_crazyflie_reward(root_positions, target_root_positions, target_next_positions, root_quats, root_linvels, root_angvels, reset_buf, progress_buf, max_episode_length,reset_target):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor) -> Tuple[Tensor, Tensor, Tensor]
+def compute_crazyflie_reward(root_positions, target_root_positions, target_next_positions, target_next_next_positions ,root_quats, root_linvels, root_angvels, reset_buf, progress_buf, max_episode_length,reset_target):
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor,Tensor, Tensor, Tensor, Tensor, float, Tensor) -> Tuple[Tensor, Tensor, Tensor]
 
-    # distance to last target
-    
     # distance to target
     target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
     
     target_dist_next = torch.sqrt(torch.square(target_next_positions - root_positions).sum(-1))
     
+    target_dist_next_next = torch.sqrt(torch.square(target_next_next_positions - root_positions).sum(-1))
     # target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
     #                          root_positions[..., 1] * root_positions[..., 1] +
     #                          (1.3 - root_positions[..., 2]) * (1.3 - root_positions[..., 2]))    
     
     d = 0.5
-    pos_reward = 2*d / (1 + target_dist * target_dist) + d**2 / (1 + target_dist_next * target_dist_next)
-    # print("pos_reward: ", pos_reward)
+    pos_reward = 1 / (target_dist * target_dist) + d / (target_dist_next * target_dist_next) + d*d / (target_dist_next_next * target_dist_next_next)
+    # pos_reward = 1 / (1 + target_dist) + d / (1 + target_dist_next) + d*d / (1 + target_dist_next_next)
+    
 
-    # print("target_root_positions: ", target_root_positions)
     # print("root_positions: ", root_positions)
+    # print("target_root_positions: ", target_root_positions)
+    # print("target_next_positions: ", target_next_positions)
+    # print("target_next_next_positions: ", target_next_next_positions)
     # print("target_dist: ", target_dist)
     # uprightness
     ups = quat_axis(root_quats, 2)
@@ -340,17 +360,22 @@ def compute_crazyflie_reward(root_positions, target_root_positions, target_next_
     spinnage = torch.abs(root_angvels[..., 2])
     spinnage_reward = 1.0 / (1.0 + spinnage * spinnage)
 
-    # combined reward
-    # uprigness and spinning only matter when close to the target
-    reward = pos_reward
+    # velocity
+    velocity = torch.norm(root_linvels, dim=-1)
+
+    # print("pos_reward: ", pos_reward)
+    # print("root_linvels: ", root_linvels)
+    # print("pos_reward: ", pos_reward)
+    # print("velocity1: ", velocity)
+    reward =  pos_reward + 0.1*pos_reward*velocity
     # reward = pos_reward + pos_reward * (up_reward + spinnage_reward)
     # print("reward:",reward)
 
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
-    die = torch.where(target_dist > 2, ones, die)
-    die = torch.where(root_positions[..., 2] < 0.7, ones, die)
+    die = torch.where(target_dist > 1, ones, die)
+    die = torch.where(root_positions[..., 2] < 0.5, ones, die)
     
     # resets due to episode length
     reset = torch.where(progress_buf >= max_episode_length - 1, ones, die)

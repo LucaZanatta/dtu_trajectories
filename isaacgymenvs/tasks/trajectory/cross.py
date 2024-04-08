@@ -4,13 +4,13 @@ import numpy as np
 
 
 def generate_corss_points():
-    t1 = np.linspace(0, 1, 5)
+    t1 = np.linspace(0, 0.75, 3)
     x1 = t1
     y1 = np.zeros_like(x1)
     z1 = np.ones_like(x1)
     
     radius = 0.5
-    t2 = np.linspace(-np.pi/2, np.pi/2, 20)
+    t2 = np.linspace(-np.pi/2, np.pi*0.99/2, 20)
     x2 = radius*np.cos(t2)+1
     y2 = np.zeros_like(x2)
     z2 = radius*np.sin(t2)+1.5
@@ -20,7 +20,7 @@ def generate_corss_points():
     y3 = np.zeros_like(x3)
     z3 = radius*np.sin(t3) + 1.5
     
-    t4 = np.linspace(1.5, 0.5, 5)
+    t4 = np.linspace(1.4, 0.5, 4)
     x4 = np.ones_like(t4) * 0.5
     y4 = np.zeros_like(x4)
     z4 = t4

@@ -4,7 +4,7 @@ import numpy as np
 
 
 def generate_retreat_points():
-    t1 = np.linspace(0, 0.5, 5)
+    t1 = np.linspace(0, 0.4, 5)
     x1 = t1
     y1 = np.zeros_like(x1)
     z1 = np.ones_like(x1)
@@ -15,7 +15,7 @@ def generate_retreat_points():
     y2 = np.zeros_like(x2)
     z2 = radius*np.sin(t2)+1.5
     
-    t3 = np.linspace(0.5, -0.5, 10)
+    t3 = np.linspace(0.4, -0.5, 10)
     x3 = t3
     y3 = np.zeros_like(x3)
     z3 = np.ones_like(x3) + 2*radius

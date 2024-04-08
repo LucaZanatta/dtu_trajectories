@@ -6,8 +6,8 @@ physics_engine: ${..physics_engine}
 # if given, will override the device setting in gym. 
 env:
   numEnvs: ${resolve_default:8192,${...num_envs}}
-  envSpacing: 1.25
-  maxEpisodeLength: 500
+  envSpacing: 2.5
+  maxEpisodeLength: 700
   enableDebugVis: False
 
   clipObservations: 5.0
@@ -26,7 +26,7 @@ sim:
     num_threads: ${....num_threads}
     solver_type: ${....solver_type}
     use_gpu: ${contains:"cuda",${....sim_device}} # set to False to run on CPU
-    num_position_iterations: 4
+    num_position_iterations: 6
     num_velocity_iterations: 0
     contact_offset: 0.02
     rest_offset: 0.001

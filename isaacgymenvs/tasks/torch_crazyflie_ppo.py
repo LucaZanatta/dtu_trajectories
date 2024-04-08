@@ -13,10 +13,12 @@ from skrl.resources.preprocessors.torch import RunningStandardScaler
 from skrl.resources.schedulers.torch import KLAdaptiveRL
 from skrl.trainers.torch import SequentialTrainer
 from skrl.utils import set_seed
+import wandb
+
+wandb.login()
 
 # seed for reproducibility
 seed = set_seed()  # e.g. `set_seed(42)` for fixed seed
-
 
 # define shared model (stochastic and deterministic models) using mixins
 class Shared(GaussianMixin, DeterministicMixin, Model):
@@ -106,9 +108,12 @@ cfg["state_preprocessor_kwargs"] = {"size": env.observation_space, "device": dev
 cfg["value_preprocessor"] = RunningStandardScaler
 cfg["value_preprocessor_kwargs"] = {"size": 1, "device": device}
 # logging to TensorBoard and write checkpoints (in timesteps)
-cfg["experiment"]["write_interval"] = 50000
-cfg["experiment"]["checkpoint_interval"] = 50000
+cfg["experiment"]["write_interval"] = 250
+cfg["experiment"]["checkpoint_interval"] = 1000
 cfg["experiment"]["directory"] = "isaacgymenvs/runs/Crazyflie"
+cfg["experiment"]["experiment_name"] = "crazyflie_ppo"
+cfg["experiment"]["wandb"] = True
+# cfg["experiment"]["wandb_kwargs"] = {}
 
 agent = PPO(models=models,
             memory=memory,
@@ -119,7 +124,7 @@ agent = PPO(models=models,
 
 
 # configure and instantiate the RL trainer
-cfg_trainer = {"timesteps":1000000, "headless": True}
+cfg_trainer = {"timesteps":2000000, "headless": True}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training

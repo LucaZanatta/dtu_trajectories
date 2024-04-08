@@ -1,39 +1,27 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
+import matplotlib
 
 def trajectory_eva_1(data):
         
-    # 提取x、y、z坐标
     x_coords = data.iloc[:, 0]
     y_coords = data.iloc[:, 1]
     z_coords = data.iloc[:, 2]
     num_elements = len(z_coords)
-    # print("first x: ", data.iloc[:, 0][0])
 
-    # 计算数据范围
     x_min, x_max = np.min(x_coords), np.max(x_coords)
     y_min, y_max = np.min(y_coords), np.max(y_coords)
     z_min, z_max = np.min(z_coords), np.max(z_coords)
-    # print("y_min: ", y_min)
-    # print("y_max: ", y_max)
-    # print("z_min: ", z_min)
-    # print("z_max: ", z_max)
-    # 计算立方体尺寸
+
     cube_size = 0.1
 
-    # 计算立方体的边界
     x_edges = np.arange(x_min, x_max + cube_size, cube_size)
     y_edges = np.arange(y_min, y_max + cube_size, cube_size)
     z_edges = np.arange(z_min, z_max + cube_size, cube_size)
-    # print("x_edges: ", x_edges)
-    # print("y_edges: ", y_edges)
-    # print("z_edges: ", z_edges)
-    # 计算每个小正方体中的坐标点数量
+
     counts = np.zeros((len(x_edges), len(y_edges), len(z_edges)), dtype=int)
 
-    # 遍历每个坐标点，将其分配到相应的小正方体中
     for x, y, z in zip(x_coords, y_coords, z_coords):
         x_index = np.searchsorted(x_edges, x) - 1
         y_index = np.searchsorted(y_edges, y) - 1
@@ -43,11 +31,54 @@ def trajectory_eva_1(data):
     sum = 0
     N = 0
     sum_cube = 0
-    # 输出每个小正方体里的坐标点个数
+
     for i in range(counts.shape[0]):
         for j in range(counts.shape[1]):
             for k in range(counts.shape[2]):
-                # print(f'小正方体({i},{j},{k})里的坐标点个数: {counts[i,j,k]}')
+                N = N + counts[i,j,k]
+                sum = sum + counts[i,j,k]**2
+                # sum_cube = sum_cube + 1
+                # sum = sum + (counts[i,j,k]/(num_elements - cube_size**2))**2
+    # print("sum: ", sum)
+    # print("N: ", N)
+    C = np.log(sum / (N**2)) / np.log(cube_size)
+    # C = np.log(sum/(N))/np.log(cube_size)
+    # C = np.log(sum)/np.log(cube_size)
+    # C = sum
+    return C
+
+def trajectory_eva_2(data):
+        
+    x_coords = data.iloc[:, 0]
+    y_coords = data.iloc[:, 1]
+    z_coords = data.iloc[:, 2]
+    num_elements = len(z_coords)
+
+    x_min, x_max = np.min(x_coords), np.max(x_coords)
+    y_min, y_max = np.min(y_coords), np.max(y_coords)
+    z_min, z_max = np.min(z_coords), np.max(z_coords)
+
+    cube_size = 0.1
+
+    x_edges = np.arange(x_min, x_max + cube_size, cube_size)
+    y_edges = np.arange(y_min, y_max + cube_size, cube_size)
+    z_edges = np.arange(z_min, z_max + cube_size, cube_size)
+
+    counts = np.zeros((len(x_edges), len(y_edges), len(z_edges)), dtype=int)
+
+    for x, y, z in zip(x_coords, y_coords, z_coords):
+        x_index = np.searchsorted(x_edges, x) - 1
+        y_index = np.searchsorted(y_edges, y) - 1
+        z_index = np.searchsorted(z_edges, z) - 1
+        counts[x_index, y_index, z_index] += 1
+
+    sum = 0
+    N = 0
+    sum_cube = 0
+
+    for i in range(counts.shape[0]):
+        for j in range(counts.shape[1]):
+            for k in range(counts.shape[2]):
                 N = N + counts[i,j,k]
                 # sum = sum + counts[i,j,k]**2
                 sum_cube = sum_cube + 1
@@ -58,10 +89,10 @@ def trajectory_eva_1(data):
     C = np.log(sum/(N))/np.log(cube_size)
     # C = np.log(sum)/np.log(cube_size)
     # C = sum
-    
     return C
 
-def trajectory_eva_2(data):
+
+def trajectory_eva_3(data):
     num_elements = len(data)
     evals = []
     for i in range(num_elements-2):
@@ -74,7 +105,7 @@ def trajectory_eva_2(data):
         norm_vector1 = np.linalg.norm(vector1)
         norm_vector2 = np.linalg.norm(vector2)
         angle_rad = np.arccos(dot_product / (norm_vector1 * norm_vector2))
-        angle_deg = np.degrees(angle_rad)+180
+        angle_deg = np.degrees(angle_rad)+90
         evals.append(angle_deg)
     C = sum(evals) / num_elements
     return C
@@ -85,37 +116,159 @@ line_x = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
 line_xy = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xy.csv')
 line_xyz = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xyz.csv')
 circle = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
-d_circle = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle.csv')
-d_circle_plus = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle_plus.csv')
-helix = pd.read_csv('isaacgymenvs/tasks/trajectory/helix.csv')
+ouroboros = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros.csv')
+ouroboros_z = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros_z.csv')
+ouroboros_plus = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros_plus.csv')
+ouroboros_plus_z = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros_plus_z.csv')
+corss = pd.read_csv('isaacgymenvs/tasks/trajectory/corss.csv')
+ellipse = pd.read_csv('isaacgymenvs/tasks/trajectory/ellipse.csv')
+line_fold = pd.read_csv('isaacgymenvs/tasks/trajectory/line_fold.csv')
+playground = pd.read_csv('isaacgymenvs/tasks/trajectory/playground.csv')
+retreat = pd.read_csv('isaacgymenvs/tasks/trajectory/retreat.csv')
+sin = pd.read_csv('isaacgymenvs/tasks/trajectory/sin.csv')
+spiral_v = pd.read_csv('isaacgymenvs/tasks/trajectory/spiral_v.csv')
+spiral_h = pd.read_csv('isaacgymenvs/tasks/trajectory/spiral_h.csv')
+swirl = pd.read_csv('isaacgymenvs/tasks/trajectory/swirl.csv')
+tornado = pd.read_csv('isaacgymenvs/tasks/trajectory/tornado.csv')
+wheel = pd.read_csv('isaacgymenvs/tasks/trajectory/wheel.csv')
+roll = pd.read_csv('isaacgymenvs/tasks/trajectory/roll.csv')
+
+# m1
+m1_line_x = trajectory_eva_1(line_x)
+m1_line_xy = trajectory_eva_1(line_xy)
+m1_line_xyz = trajectory_eva_1(line_xyz)
+m1_circle = trajectory_eva_1(circle)
+m1_ouroboros = trajectory_eva_1(ouroboros)
+m1_ouroboros_z = trajectory_eva_1(ouroboros_z)
+m1_ouroboros_plus = trajectory_eva_1(ouroboros_plus)
+m1_ouroboros_plus_z = trajectory_eva_1(ouroboros_plus_z)
+m1_corss = trajectory_eva_1(corss)
+m1_ellipse = trajectory_eva_1(ellipse)
+m1_line_fold = trajectory_eva_1(line_fold)
+m1_playground = trajectory_eva_1(playground)
+m1_retreat = trajectory_eva_1(retreat)
+m1_sin = trajectory_eva_1(sin)
+m1_spiral_v = trajectory_eva_1(spiral_v)
+m1_spiral_h = trajectory_eva_1(spiral_h)
+m1_swirl = trajectory_eva_1(swirl)
+m1_tornado = trajectory_eva_1(tornado)
+m1_wheel = trajectory_eva_1(wheel)
+m1_roll = trajectory_eva_1(roll)
+
+# m2
+m2_line_x = trajectory_eva_2(line_x)
+m2_line_xy = trajectory_eva_2(line_xy)
+m2_line_xyz = trajectory_eva_2(line_xyz)
+m2_circle = trajectory_eva_2(circle)
+m2_ouroboros = trajectory_eva_2(ouroboros)
+m2_ouroboros_z = trajectory_eva_2(ouroboros_z)
+m2_ouroboros_plus = trajectory_eva_2(ouroboros_plus)
+m2_ouroboros_plus_z = trajectory_eva_2(ouroboros_plus_z)
+m2_corss = trajectory_eva_2(corss)
+m2_ellipse = trajectory_eva_2(ellipse)
+m2_line_fold = trajectory_eva_2(line_fold)
+m2_playground = trajectory_eva_2(playground)
+m2_retreat = trajectory_eva_2(retreat)
+m2_sin = trajectory_eva_2(sin)
+m2_spiral_v = trajectory_eva_2(spiral_v)
+m2_spiral_h = trajectory_eva_2(spiral_h)
+m2_swirl = trajectory_eva_2(swirl)
+m2_tornado = trajectory_eva_2(tornado)
+m2_wheel = trajectory_eva_2(wheel)
+m2_roll = trajectory_eva_2(roll)
+
+# m3
+m3_line_x = 0
+m3_line_xy = 0
+m3_line_xyz = 0
+m3_circle = trajectory_eva_3(circle)
+m3_ouroboros = trajectory_eva_3(ouroboros)
+m3_ouroboros_z = trajectory_eva_3(ouroboros_z)
+m3_ouroboros_plus = trajectory_eva_3(ouroboros_plus)
+m3_ouroboros_plus_z = trajectory_eva_3(ouroboros_plus_z)
+m3_corss = trajectory_eva_3(corss)
+m3_ellipse = trajectory_eva_3(ellipse)
+m3_line_fold = trajectory_eva_3(line_fold)
+m3_playground = trajectory_eva_3(playground)
+m3_retreat = trajectory_eva_3(retreat)
+m3_sin = trajectory_eva_3(sin)
+m3_spiral_v = trajectory_eva_3(spiral_v)
+m3_spiral_h = trajectory_eva_3(spiral_h)
+m3_swirl = trajectory_eva_3(swirl)
+m3_tornado = trajectory_eva_3(tornado)
+m3_wheel = trajectory_eva_3(wheel)
+m3_roll = trajectory_eva_3(roll)
 
 
-C_line_x = trajectory_eva_1(line_x)
-C_line_xy = trajectory_eva_1(line_xy)
-C_line_xyz = trajectory_eva_1(line_xyz)
-C_circle = trajectory_eva_1(circle)
-C_d_circle = trajectory_eva_1(d_circle)
-C_d_circle_plus = trajectory_eva_1(d_circle_plus)
-C_helix = trajectory_eva_1(helix)
+# method 1
+original_numbers = []
+original_numbers.append(m1_line_x)
+original_numbers.append(m1_line_xy)
+original_numbers.append(m1_line_xyz)
+original_numbers.append(m1_circle)
+original_numbers.append(m1_ouroboros)
+original_numbers.append(m1_ouroboros_z)
+original_numbers.append(m1_ouroboros_plus)
+original_numbers.append(m1_ouroboros_plus_z)
+original_numbers.append(m1_corss)
+original_numbers.append(m1_ellipse)
+original_numbers.append(m1_line_fold)
+original_numbers.append(m1_playground)
+original_numbers.append(m1_retreat)
+original_numbers.append(m1_sin)
+original_numbers.append(m1_spiral_v)
+original_numbers.append(m1_spiral_h)
+original_numbers.append(m1_swirl)
+original_numbers.append(m1_tornado)
+original_numbers.append(m1_wheel)
+original_numbers.append(m1_roll)
 
-# C_line_x = 0
-# C_line_xy = 0
-# C_line_xyz = 0
-# C_circle = trajectory_eva_2(circle)
-# C_d_circle = trajectory_eva_2(d_circle)
-# C_d_circle_plus = trajectory_eva_2(d_circle_plus)
-# C_helix = trajectory_eva_2(helix)
+# method 2
+original_numbers = []
+original_numbers.append(m2_line_x)
+original_numbers.append(m2_line_xy)
+original_numbers.append(m2_line_xyz)
+original_numbers.append(m2_circle)
+original_numbers.append(m2_ouroboros)
+original_numbers.append(m2_ouroboros_z)
+original_numbers.append(m2_ouroboros_plus)
+original_numbers.append(m2_ouroboros_plus_z)
+original_numbers.append(m2_corss)
+original_numbers.append(m2_ellipse)
+original_numbers.append(m2_line_fold)
+original_numbers.append(m2_playground)
+original_numbers.append(m2_retreat)
+original_numbers.append(m2_sin)
+original_numbers.append(m2_spiral_v)
+original_numbers.append(m2_spiral_h)
+original_numbers.append(m2_swirl)
+original_numbers.append(m2_tornado)
+original_numbers.append(m2_wheel)
+original_numbers.append(m2_roll)
 
-print("C_line_x: ", C_line_x)
-print("C_line_xy: ", C_line_xy)
-print("C_line_xyz: ", C_line_xyz)
-print("C_circle: ", C_circle)
-print("C_d_circle: ", C_d_circle)
-print("C_d_circle_plus: ", C_d_circle_plus)
-print("C_helix: ", C_helix)
-
-
-
+# method 3
+original_numbers = []
+original_numbers.append(m3_line_x)
+original_numbers.append(m3_line_xy)
+original_numbers.append(m3_line_xyz)
+original_numbers.append(m3_circle)
+original_numbers.append(m3_ouroboros)
+original_numbers.append(m3_ouroboros_z)
+original_numbers.append(m3_ouroboros_plus)
+original_numbers.append(m3_ouroboros_plus_z)
+original_numbers.append(m3_corss)
+original_numbers.append(m3_ellipse)
+original_numbers.append(m3_line_fold)
+original_numbers.append(m3_playground)
+original_numbers.append(m3_retreat)
+original_numbers.append(m3_sin)
+original_numbers.append(m3_spiral_v)
+original_numbers.append(m3_spiral_h)
+original_numbers.append(m3_swirl)
+original_numbers.append(m3_tornado)
+original_numbers.append(m3_wheel)
+original_numbers.append(m3_roll)
+print("original_numbers: ", original_numbers)
 
 def scale_to_integer_range(values, new_min, new_max):
     min_original = min(values)
@@ -126,23 +279,20 @@ def scale_to_integer_range(values, new_min, new_max):
     ]
     return scaled_values
 
-original_numbers = []
-original_numbers.append(C_line_x)
-original_numbers.append(C_line_xy)
-original_numbers.append(C_line_xyz)
-original_numbers.append(C_circle)
-original_numbers.append(C_d_circle)
-original_numbers.append(C_d_circle_plus)
-original_numbers.append(C_helix)
-
 scaled_values = scale_to_integer_range(original_numbers, 1, 10)
 
 
+# Create a colormap
+cmap = matplotlib.colormaps['viridis']
+
+# Generate colors based on the number of bars
+colors = [cmap(i) for i in np.linspace(0, 1, len(scaled_values))]
+
 # Plotting the bar chart
-plt.bar(range(len(scaled_values)), scaled_values, color=['red', 'blue', 'green', 'orange', 'purple', 'yellow', 'pink'])
+plt.bar(range(len(scaled_values)), scaled_values, color=colors)
 plt.xlabel('Trajectory')
 plt.ylabel('Complexity (Scaled)')
 plt.title('Complexity of Trajectories')
-plt.xticks(range(len(scaled_values)), ['Line X', 'Line XY', 'Line XYZ', 'Circle', 'D Circle', 'D Circle Plus', 'Helix'], fontsize=8)
+plt.xticks(range(len(scaled_values)), ['Line X', 'Line XY', 'Line XYZ', 'Circle', 'Ouroboros', 'Ouroboros_z', 'Ouroboros_plus', 'Ouroboros_plus_z', 'Cross', 'Ellipse', 'Line fold', 'Playground', 'Retreat', 'Sin', 'Spiral V', 'Spiral H', 'Swirl', 'Tornado', 'Wheel', 'Roll'], fontsize=8)
 plt.show()
 print("scaled_values: ", scaled_values)

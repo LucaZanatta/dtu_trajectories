@@ -37,7 +37,7 @@ from .base.vec_task import VecTask
 from CTBRcontroller import CTRBctrl
 import torch
 import pandas as pd
-
+# from skrl.utils import isaacgym_utils
 
 class Crazyflie(VecTask):
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
@@ -148,6 +148,9 @@ class Crazyflie(VecTask):
     
         
     def _create_envs(self, num_envs, spacing, num_per_row):
+        # create a web viewer instance
+        # self.web_viewer = isaacgym_utils.WebViewer()
+        
         lower = gymapi.Vec3(-spacing, -spacing, 0)
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
@@ -167,12 +170,13 @@ class Crazyflie(VecTask):
         default_pose.p.z = 1 # set initial height to 1
 
         self.envs = []
+        
         for i in range(self.num_envs):
             # create env instance
             env = self.gym.create_env(self.sim, lower, upper, num_per_row)
-            actor_handle = self.gym.create_actor(env, asset, default_pose, "crazyflie", i, 1, 1)            
+            actor_handle = self.gym.create_actor(env, asset, default_pose, "crazyflie", i, 1, 1)          
             self.envs.append(env)
-        
+            
         if self.debug_viz:
             # need env offsets for the rotors
             self.rotor_env_offsets = torch.zeros((self.num_envs, 4, 3), device=self.device)
@@ -199,7 +203,7 @@ class Crazyflie(VecTask):
         self.target_index[env_ids] = -1
         self.target_next_index[env_ids] = 0
         self.target_next_next_index[env_ids] = 1
-        # print("###############reset envs########")
+        # print("##############################reset envs#############################")
         self.set_targets(env_ids)
         
     def set_targets(self,env_ids):
@@ -332,7 +336,7 @@ def compute_crazyflie_reward(root_positions, target_root_positions, target_next_
     #                          (1.3 - root_positions[..., 2]) * (1.3 - root_positions[..., 2]))    
     
     d = 0.5
-    pos_reward = 1 / (target_dist * target_dist) + d / (target_dist_next * target_dist_next) + d*d / (target_dist_next_next * target_dist_next_next)
+    pos_reward = 1 / (1 + target_dist * target_dist) + d / (1 + target_dist_next * target_dist_next) + d*d / (1 + target_dist_next_next * target_dist_next_next)
     # pos_reward = 1 / (1 + target_dist) + d / (1 + target_dist_next) + d*d / (1 + target_dist_next_next)
     
 
@@ -357,14 +361,14 @@ def compute_crazyflie_reward(root_positions, target_root_positions, target_next_
     # print("root_linvels: ", root_linvels)
     # print("pos_reward: ", pos_reward)
     # print("velocity1: ", velocity)
-    reward =  pos_reward + 0.1*pos_reward*velocity
+    reward =  pos_reward + 0.05*pos_reward*velocity
     # reward = pos_reward + pos_reward * (up_reward + spinnage_reward)
     # print("reward:",reward)
 
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
-    die = torch.where(target_dist > 1, ones, die)
+    die = torch.where(target_dist > 2, ones, die)
     die = torch.where(root_positions[..., 2] < 0.5, ones, die)
     
     # resets due to episode length

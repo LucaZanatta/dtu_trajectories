@@ -327,7 +327,7 @@ def compute_crazyflie_reward(root_positions, target_root_positions, target_next_
 
     # distance to target
     target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
-    
+
     target_dist_next = torch.sqrt(torch.square(target_next_positions - root_positions).sum(-1))
     
     target_dist_next_next = torch.sqrt(torch.square(target_next_next_positions - root_positions).sum(-1))
@@ -336,15 +336,20 @@ def compute_crazyflie_reward(root_positions, target_root_positions, target_next_
     #                          (1.3 - root_positions[..., 2]) * (1.3 - root_positions[..., 2]))    
     
     d = 0.5
-    pos_reward = 1 / (1 + target_dist * target_dist) + d / (1 + target_dist_next * target_dist_next) + d*d / (1 + target_dist_next_next * target_dist_next_next)
-    # pos_reward = 1 / (1 + target_dist) + d / (1 + target_dist_next) + d*d / (1 + target_dist_next_next)
-    
+    # pos_reward = 1 / (target_dist * target_dist) + d / (target_dist_next * target_dist_next) + d*d / (target_dist_next_next * target_dist_next_next)
+    pos_reward = 1 / (1 + target_dist) + d / (1 + target_dist_next) + d*d / (1 + target_dist_next_next)
+    access = target_dist
+    index = access < 0.05
+    # print("true or not:", index)
+    access = 0*access
+    access[index] = 1000
 
+    
     # print("root_positions: ", root_positions)
     # print("target_root_positions: ", target_root_positions)
     # print("target_next_positions: ", target_next_positions)
     # print("target_next_next_positions: ", target_next_next_positions)
-    # print("target_dist: ", target_dist)
+    
     # uprightness
     ups = quat_axis(root_quats, 2)
     tiltage = torch.abs(1 - ups[..., 2])
@@ -361,9 +366,13 @@ def compute_crazyflie_reward(root_positions, target_root_positions, target_next_
     # print("root_linvels: ", root_linvels)
     # print("pos_reward: ", pos_reward)
     # print("velocity1: ", velocity)
-    reward =  pos_reward + 0.05*pos_reward*velocity
+    
+    reward =  velocity*(4*pos_reward + access)
     # reward = pos_reward + pos_reward * (up_reward + spinnage_reward)
-    # print("reward:",reward)
+    print("pos_reward: ", pos_reward)
+    print("velocity: ", velocity)
+    print("then the access is : ", access)
+    print("reward:",reward)
 
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)
@@ -377,7 +386,7 @@ def compute_crazyflie_reward(root_positions, target_root_positions, target_next_
     # reset target
     one = torch.ones_like(reset_target)
     next = torch.zeros_like(reset_target)
-    next = torch.where(target_dist < 0.1, one, next)
+    next = torch.where(target_dist < 0.05, one, next)
 
     
     return reward, reset, next

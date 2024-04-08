@@ -105,9 +105,9 @@ def trajectory_eva_3(data):
         norm_vector1 = np.linalg.norm(vector1)
         norm_vector2 = np.linalg.norm(vector2)
         angle_rad = np.arccos(dot_product / (norm_vector1 * norm_vector2))
-        angle_deg = np.degrees(angle_rad)+90
+        angle_deg = np.degrees(angle_rad)+180
         evals.append(angle_deg)
-    C = sum(evals) / num_elements
+    C = np.log(sum(evals)) / num_elements
     return C
         
 
@@ -188,7 +188,7 @@ m3_ouroboros_plus = trajectory_eva_3(ouroboros_plus)
 m3_ouroboros_plus_z = trajectory_eva_3(ouroboros_plus_z)
 m3_corss = trajectory_eva_3(corss)
 m3_ellipse = trajectory_eva_3(ellipse)
-m3_line_fold = trajectory_eva_3(line_fold)
+m3_line_fold = 0
 m3_playground = trajectory_eva_3(playground)
 m3_retreat = trajectory_eva_3(retreat)
 m3_sin = trajectory_eva_3(sin)
@@ -224,51 +224,51 @@ original_numbers.append(m1_wheel)
 original_numbers.append(m1_roll)
 
 # method 2
-original_numbers = []
-original_numbers.append(m2_line_x)
-original_numbers.append(m2_line_xy)
-original_numbers.append(m2_line_xyz)
-original_numbers.append(m2_circle)
-original_numbers.append(m2_ouroboros)
-original_numbers.append(m2_ouroboros_z)
-original_numbers.append(m2_ouroboros_plus)
-original_numbers.append(m2_ouroboros_plus_z)
-original_numbers.append(m2_corss)
-original_numbers.append(m2_ellipse)
-original_numbers.append(m2_line_fold)
-original_numbers.append(m2_playground)
-original_numbers.append(m2_retreat)
-original_numbers.append(m2_sin)
-original_numbers.append(m2_spiral_v)
-original_numbers.append(m2_spiral_h)
-original_numbers.append(m2_swirl)
-original_numbers.append(m2_tornado)
-original_numbers.append(m2_wheel)
-original_numbers.append(m2_roll)
+# original_numbers = []
+# original_numbers.append(m2_line_x)
+# original_numbers.append(m2_line_xy)
+# original_numbers.append(m2_line_xyz)
+# original_numbers.append(m2_circle)
+# original_numbers.append(m2_ouroboros)
+# original_numbers.append(m2_ouroboros_z)
+# original_numbers.append(m2_ouroboros_plus)
+# original_numbers.append(m2_ouroboros_plus_z)
+# original_numbers.append(m2_corss)
+# original_numbers.append(m2_ellipse)
+# original_numbers.append(m2_line_fold)
+# original_numbers.append(m2_playground)
+# original_numbers.append(m2_retreat)
+# original_numbers.append(m2_sin)
+# original_numbers.append(m2_spiral_v)
+# original_numbers.append(m2_spiral_h)
+# original_numbers.append(m2_swirl)
+# original_numbers.append(m2_tornado)
+# original_numbers.append(m2_wheel)
+# original_numbers.append(m2_roll)
 
 # method 3
-original_numbers = []
-original_numbers.append(m3_line_x)
-original_numbers.append(m3_line_xy)
-original_numbers.append(m3_line_xyz)
-original_numbers.append(m3_circle)
-original_numbers.append(m3_ouroboros)
-original_numbers.append(m3_ouroboros_z)
-original_numbers.append(m3_ouroboros_plus)
-original_numbers.append(m3_ouroboros_plus_z)
-original_numbers.append(m3_corss)
-original_numbers.append(m3_ellipse)
-original_numbers.append(m3_line_fold)
-original_numbers.append(m3_playground)
-original_numbers.append(m3_retreat)
-original_numbers.append(m3_sin)
-original_numbers.append(m3_spiral_v)
-original_numbers.append(m3_spiral_h)
-original_numbers.append(m3_swirl)
-original_numbers.append(m3_tornado)
-original_numbers.append(m3_wheel)
-original_numbers.append(m3_roll)
-print("original_numbers: ", original_numbers)
+# original_numbers = []
+# original_numbers.append(m3_line_x)
+# original_numbers.append(m3_line_xy)
+# original_numbers.append(m3_line_xyz)
+# original_numbers.append(m3_circle)
+# original_numbers.append(m3_ouroboros)
+# original_numbers.append(m3_ouroboros_z)
+# original_numbers.append(m3_ouroboros_plus)
+# original_numbers.append(m3_ouroboros_plus_z)
+# original_numbers.append(m3_corss)
+# original_numbers.append(m3_ellipse)
+# original_numbers.append(m3_line_fold)
+# original_numbers.append(m3_playground)
+# original_numbers.append(m3_retreat)
+# original_numbers.append(m3_sin)
+# original_numbers.append(m3_spiral_v)
+# original_numbers.append(m3_spiral_h)
+# original_numbers.append(m3_swirl)
+# original_numbers.append(m3_tornado)
+# original_numbers.append(m3_wheel)
+# original_numbers.append(m3_roll)
+
 
 def scale_to_integer_range(values, new_min, new_max):
     min_original = min(values)
@@ -283,16 +283,43 @@ scaled_values = scale_to_integer_range(original_numbers, 1, 10)
 
 
 # Create a colormap
-cmap = matplotlib.colormaps['viridis']
-
-# Generate colors based on the number of bars
-colors = [cmap(i) for i in np.linspace(0, 1, len(scaled_values))]
+colors = {
+    'red': (255, 0, 0),
+    'green': (0, 255, 0),
+    'blue': (0, 0, 255),
+    'yellow': (255, 255, 0),
+    'cyan': (0, 255, 255),
+    'magenta': (255, 0, 255),
+    'black': (0, 0, 0),
+    'orange': (255, 165, 0),
+    'purple': (128, 0, 128),
+    'pink': (255, 192, 203),
+    'brown': (165, 42, 42),
+    'teal': (0, 128, 128),
+    'lime': (0, 255, 0),
+    'olive': (128, 128, 0),
+    'maroon': (128, 0, 0),
+    'navy': (0, 0, 128),
+    'aquamarine': (127, 255, 212),
+    'turquoise': (64, 224, 208),
+    'gold': (255, 215, 0),
+    'silver': (192, 192, 192),
+    'indigo': (75, 0, 130),
+    'violet': (238, 130, 238),
+    'azure': (240, 255, 255),
+    'lavender': (230, 230, 250),
+    'beige': (245, 245, 220),
+    'khaki': (240, 230, 140),
+    'salmon': (250, 128, 114),
+    'coral': (255, 127, 80),
+    'tan': (210, 180, 140)
+}
 
 # Plotting the bar chart
 plt.bar(range(len(scaled_values)), scaled_values, color=colors)
 plt.xlabel('Trajectory')
 plt.ylabel('Complexity (Scaled)')
 plt.title('Complexity of Trajectories')
-plt.xticks(range(len(scaled_values)), ['Line X', 'Line XY', 'Line XYZ', 'Circle', 'Ouroboros', 'Ouroboros_z', 'Ouroboros_plus', 'Ouroboros_plus_z', 'Cross', 'Ellipse', 'Line fold', 'Playground', 'Retreat', 'Sin', 'Spiral V', 'Spiral H', 'Swirl', 'Tornado', 'Wheel', 'Roll'], fontsize=8)
+plt.xticks(range(len(scaled_values)), ['Line X', 'Line XY', 'Line XYZ', 'Circle', 'Ouroboros', 'Ouroboros_z', 'Ouroboros_plus', 'Ouroboros_plus_z', 'Cross', 'Ellipse', 'Line fold', 'Playground', 'Retreat', 'Sin', 'Spiral V', 'Spiral H', 'Swirl', 'Tornado', 'Wheel', 'Roll'], fontsize=8, rotation=45)
 plt.show()
 print("scaled_values: ", scaled_values)

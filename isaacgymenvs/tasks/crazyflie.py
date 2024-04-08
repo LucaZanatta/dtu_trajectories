@@ -67,12 +67,6 @@ class Crazyflie(VecTask):
         
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.initial_root_states = self.root_states.clone()
-        
-        # thrust limits
-        max_thrust = 2
-        self.thrust_lower_limits = torch.zeros(4, device=self.device, dtype=torch.float32)
-        self.thrust_upper_limits = max_thrust * torch.ones(4, device=self.device, dtype=torch.float32)
-
 
         # control tensors
         self.thrusts = torch.zeros((self.num_envs, 4), dtype=torch.float32, device=self.device, requires_grad=False)
@@ -85,6 +79,7 @@ class Crazyflie(VecTask):
         self.friction = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device)
 
         # trajectory
+        
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xy.csv')
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xyz.csv')
@@ -92,6 +87,7 @@ class Crazyflie(VecTask):
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle.csv')
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle_plus.csv')
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/helix.csv')
+        
         coordinates = self.trajectory[['X', 'Y', 'Z']].values
         self.trajectory = torch.tensor(coordinates, dtype=torch.float32, device=self.device)
         self.x = self.trajectory[:, 0]
@@ -228,26 +224,21 @@ class Crazyflie(VecTask):
         self.target_next_next_positions[env_ids,1] = self.y[self.target_next_next_index[env_ids]]
         self.target_next_next_positions[env_ids,2] = self.z[self.target_next_next_index[env_ids]]
         
-        # print("env_ids:",env_ids)
-        # print("target_index:",self.target_index[env_ids])
-        # print("next x:",self.target_root_positions[env_ids,0])
-        
         self.reset_target[env_ids] = 0
         
     def pre_physics_step(self, _actions):
         
+        # resets
+        reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
+        if len(reset_env_ids) > 0:
+            self.reset_idx(reset_env_ids)
+    
         # set targets
         reset_env_ids_target = self.reset_target.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_env_ids_target) > 0:
             self.set_targets(reset_env_ids_target)
-        
-        # resets
-        reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
-        if len(reset_env_ids) > 0:
-            self.reset_idx(reset_env_ids)  
             
         actions = _actions.to(self.device)
-        # print("actions: ", actions)
         
         # NN and CTBR
         total_torque, common_thrust = self.controller.update(actions, 
@@ -257,7 +248,6 @@ class Crazyflie(VecTask):
         self.friction[:, 0, :] = -0.02*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2       
         self.forces[:,0,2] = common_thrust
         self.forces[:,0,:] += self.friction[:,0,:]
-        # print("forces: ", self.forces)
 
         # clear actions for reset envs
         self.forces[reset_env_ids] = 0.0
@@ -292,9 +282,9 @@ class Crazyflie(VecTask):
             verts = torch.stack([starts, ends], dim=2).cpu().numpy()
             colors = np.zeros((self.num_envs * 4, 3), dtype=np.float32)
             colors[..., 0] = 1.0
-            # self.gym.clear_lines(self.viewer)
+            self.gym.clear_lines(self.viewer)
             self.gym.add_lines(self.viewer, None, self.num_envs * 4, verts, colors)
-            self.gym.draw_viewer(self.viewer)
+            # self.gym.draw_viewer(self.viewer)
 
         
     def compute_observations(self):

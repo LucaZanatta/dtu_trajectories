@@ -6,7 +6,7 @@ import numpy as np
 def generate_circle_points(num_points):
     t = np.linspace(0, 2*np.pi, num_points)
     radius = 1
-    x = radius*np.cos(t) - radius
+    x = radius - radius*np.cos(t)
     y = radius*np.sin(t)
     z = np.ones_like(t)
     return x, y, z
@@ -50,7 +50,7 @@ def plot_3d_trajectory(x, y, z):
     plt.show()
 
 
-num_points = 50
+num_points = 100
 x, y, z = generate_circle_points(num_points)
 
 # plot_2d_trajectory(x, y)

@@ -110,7 +110,7 @@ cfg["value_preprocessor_kwargs"] = {"size": 1, "device": device}
 # logging to TensorBoard and write checkpoints (in timesteps)
 cfg["experiment"]["write_interval"] = 250
 cfg["experiment"]["checkpoint_interval"] = 1000
-cfg["experiment"]["directory"] = "isaacgymenvs/runs/Crazyflie"
+cfg["experiment"]["directory"] = "isaacgymenvs/runs"
 cfg["experiment"]["experiment_name"] = "crazyflie_ppo"
 cfg["experiment"]["wandb"] = True
 # cfg["experiment"]["wandb_kwargs"] = {}
@@ -139,7 +139,7 @@ trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 # # download the trained agent's checkpoint from Hugging Face Hub and load it
 # # path = download_model_from_huggingface("skrl/IsaacGymEnvs-Quadcopter-PPO", filename="agent.pt")
 
-# path = "isaacgymenvs/runs/Crazyflie/crazyflie_ppo/checkpoints/agent_462000.pt"
+# path = "isaacgymenvs/runs/crazyflie_ppo/checkpoints/best_agent.pt"
 # agent.load(path)
 # trainer.eval()
 trainer.train()

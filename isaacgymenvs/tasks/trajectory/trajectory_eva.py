@@ -50,7 +50,9 @@ def trajectory_eva_1(data):
 
 def trajectory_eva_3(data):
     num_elements = len(data)
-    evals = []
+    angles = []
+    lengths = []
+    # sum of angles between 3 consecutive points
     for i in range(num_elements-2):
         point1 = data.loc[i, ['X', 'Y', 'Z']]
         point2 = data.loc[i+1, ['X', 'Y', 'Z']]
@@ -61,11 +63,19 @@ def trajectory_eva_3(data):
         norm_vector1 = np.linalg.norm(vector1)
         norm_vector2 = np.linalg.norm(vector2)
         angle_rad = np.arccos(dot_product / (norm_vector1 * norm_vector2))
-        angle_deg = np.degrees(angle_rad)+180
+        angle_deg = np.degrees(angle_rad)
         eval = (norm_vector1+norm_vector2)**2 * angle_deg
-        evals.append(eval)
-        
-    C = sum(evals)
+        angles.append(eval)
+    
+    # sun of lengths of the trajectory
+    for i in range(num_elements-1):
+        point1 = data.loc[i, ['X', 'Y', 'Z']]
+        point2 = data.loc[i+1, ['X', 'Y', 'Z']]
+        vector = point2 - point1
+        norm_vector = np.linalg.norm(vector)
+        lengths.append(norm_vector)
+    
+    C = sum(angles)/sum(lengths)
     return np.log(C)
 
         

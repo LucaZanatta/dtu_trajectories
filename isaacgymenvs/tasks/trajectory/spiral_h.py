@@ -5,7 +5,7 @@ import numpy as np
 
 def generate_spiral_h_points(num_points):
     t = np.linspace(0, 6*np.pi, num_points)
-    radius = 0.5
+    radius = 1
     pitch = 0.5
     x = pitch * t / (2*np.pi)
     y = radius * np.sin(t)
@@ -52,7 +52,7 @@ def plot_3d_trajectory(x, y, z):
     plt.show()
 
 
-num_points = 50
+num_points = 100
 x, y, z = generate_spiral_h_points(num_points)
 
 # plot_2d_trajectory(x, y)

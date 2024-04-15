@@ -15,7 +15,7 @@ def generate_retreat_points():
     y2 = radius*np.sin(t2) + radius
     z2 = np.ones_like(x2)
     
-    t3 = np.linspace(1.01, 0.01, 5)
+    t3 = np.linspace(0.99, 0.01, 5)
     x3 = t3
     y3 = np.ones_like(x3)
     z3 = np.ones_like(x3)

@@ -48,7 +48,7 @@ def trajectory_eva_1(data):
     return C
 
 def trajectory_eva_2(data):
-        
+
     x_coords = data.iloc[:, 0]
     y_coords = data.iloc[:, 1]
     z_coords = data.iloc[:, 2]
@@ -93,8 +93,11 @@ def trajectory_eva_2(data):
 
 
 def trajectory_eva_3(data):
+    # print("data: ")
     num_elements = len(data)
-    evals = []
+    angles = []
+    lengths = []
+    # sum of angles between 3 consecutive points
     for i in range(num_elements-2):
         point1 = data.loc[i, ['X', 'Y', 'Z']]
         point2 = data.loc[i+1, ['X', 'Y', 'Z']]
@@ -104,11 +107,25 @@ def trajectory_eva_3(data):
         dot_product = np.dot(vector1, vector2)
         norm_vector1 = np.linalg.norm(vector1)
         norm_vector2 = np.linalg.norm(vector2)
-        angle_rad = np.arccos(dot_product / (norm_vector1 * norm_vector2))
-        angle_deg = np.degrees(angle_rad)+180
-        evals.append(angle_deg)
-    C = np.log(sum(evals)) / num_elements
+        cos_angle = dot_product / (norm_vector1 * norm_vector2)
+        angle_clip = np.clip(cos_angle, -1, 1)
+        angle_rad = np.arccos(angle_clip)
+        angle_deg = np.degrees(angle_rad)
+        angles.append(angle_deg)
+
+    # sun of lengths of the trajectory
+    for i in range(num_elements-1):
+        point1 = data.loc[i, ['X', 'Y', 'Z']]
+        point2 = data.loc[i+1, ['X', 'Y', 'Z']]
+        vector = point2 - point1
+        norm_vector = np.linalg.norm(vector)
+        lengths.append(norm_vector)
+    
+    # print("angles: ", sum(angles))
+    # print("lengths: ", sum(lengths))
+    C = sum(angles)/np.log(sum(lengths))
     return C
+
         
 
 
@@ -134,48 +151,48 @@ wheel = pd.read_csv('isaacgymenvs/tasks/trajectory/wheel.csv')
 roll = pd.read_csv('isaacgymenvs/tasks/trajectory/roll.csv')
 
 # m1
-m1_line_x = trajectory_eva_1(line_x)
-m1_line_xy = trajectory_eva_1(line_xy)
-m1_line_xyz = trajectory_eva_1(line_xyz)
-m1_circle = trajectory_eva_1(circle)
-m1_ouroboros = trajectory_eva_1(ouroboros)
-m1_ouroboros_z = trajectory_eva_1(ouroboros_z)
-m1_ouroboros_plus = trajectory_eva_1(ouroboros_plus)
-m1_ouroboros_plus_z = trajectory_eva_1(ouroboros_plus_z)
-m1_corss = trajectory_eva_1(corss)
-m1_ellipse = trajectory_eva_1(ellipse)
-m1_line_fold = trajectory_eva_1(line_fold)
-m1_playground = trajectory_eva_1(playground)
-m1_retreat = trajectory_eva_1(retreat)
-m1_sin = trajectory_eva_1(sin)
-m1_spiral_v = trajectory_eva_1(spiral_v)
-m1_spiral_h = trajectory_eva_1(spiral_h)
-m1_swirl = trajectory_eva_1(swirl)
-m1_tornado = trajectory_eva_1(tornado)
-m1_wheel = trajectory_eva_1(wheel)
-m1_roll = trajectory_eva_1(roll)
+# m1_line_x = trajectory_eva_1(line_x)
+# m1_line_xy = trajectory_eva_1(line_xy)
+# m1_line_xyz = trajectory_eva_1(line_xyz)
+# m1_circle = trajectory_eva_1(circle)
+# m1_ouroboros = trajectory_eva_1(ouroboros)
+# m1_ouroboros_z = trajectory_eva_1(ouroboros_z)
+# m1_ouroboros_plus = trajectory_eva_1(ouroboros_plus)
+# m1_ouroboros_plus_z = trajectory_eva_1(ouroboros_plus_z)
+# m1_corss = trajectory_eva_1(corss)
+# m1_ellipse = trajectory_eva_1(ellipse)
+# m1_line_fold = trajectory_eva_1(line_fold)
+# m1_playground = trajectory_eva_1(playground)
+# m1_retreat = trajectory_eva_1(retreat)
+# m1_sin = trajectory_eva_1(sin)
+# m1_spiral_v = trajectory_eva_1(spiral_v)
+# m1_spiral_h = trajectory_eva_1(spiral_h)
+# m1_swirl = trajectory_eva_1(swirl)
+# m1_tornado = trajectory_eva_1(tornado)
+# m1_wheel = trajectory_eva_1(wheel)
+# m1_roll = trajectory_eva_1(roll)
 
 # m2
-m2_line_x = trajectory_eva_2(line_x)
-m2_line_xy = trajectory_eva_2(line_xy)
-m2_line_xyz = trajectory_eva_2(line_xyz)
-m2_circle = trajectory_eva_2(circle)
-m2_ouroboros = trajectory_eva_2(ouroboros)
-m2_ouroboros_z = trajectory_eva_2(ouroboros_z)
-m2_ouroboros_plus = trajectory_eva_2(ouroboros_plus)
-m2_ouroboros_plus_z = trajectory_eva_2(ouroboros_plus_z)
-m2_corss = trajectory_eva_2(corss)
-m2_ellipse = trajectory_eva_2(ellipse)
-m2_line_fold = trajectory_eva_2(line_fold)
-m2_playground = trajectory_eva_2(playground)
-m2_retreat = trajectory_eva_2(retreat)
-m2_sin = trajectory_eva_2(sin)
-m2_spiral_v = trajectory_eva_2(spiral_v)
-m2_spiral_h = trajectory_eva_2(spiral_h)
-m2_swirl = trajectory_eva_2(swirl)
-m2_tornado = trajectory_eva_2(tornado)
-m2_wheel = trajectory_eva_2(wheel)
-m2_roll = trajectory_eva_2(roll)
+# m2_line_x = trajectory_eva_2(line_x)
+# m2_line_xy = trajectory_eva_2(line_xy)
+# m2_line_xyz = trajectory_eva_2(line_xyz)
+# m2_circle = trajectory_eva_2(circle)
+# m2_ouroboros = trajectory_eva_2(ouroboros)
+# m2_ouroboros_z = trajectory_eva_2(ouroboros_z)
+# m2_ouroboros_plus = trajectory_eva_2(ouroboros_plus)
+# m2_ouroboros_plus_z = trajectory_eva_2(ouroboros_plus_z)
+# m2_corss = trajectory_eva_2(corss)
+# m2_ellipse = trajectory_eva_2(ellipse)
+# m2_line_fold = trajectory_eva_2(line_fold)
+# m2_playground = trajectory_eva_2(playground)
+# m2_retreat = trajectory_eva_2(retreat)
+# m2_sin = trajectory_eva_2(sin)
+# m2_spiral_v = trajectory_eva_2(spiral_v)
+# m2_spiral_h = trajectory_eva_2(spiral_h)
+# m2_swirl = trajectory_eva_2(swirl)
+# m2_tornado = trajectory_eva_2(tornado)
+# m2_wheel = trajectory_eva_2(wheel)
+# m2_roll = trajectory_eva_2(roll)
 
 # m3
 m3_line_x = 0
@@ -188,7 +205,6 @@ m3_ouroboros_plus = trajectory_eva_3(ouroboros_plus)
 m3_ouroboros_plus_z = trajectory_eva_3(ouroboros_plus_z)
 m3_corss = trajectory_eva_3(corss)
 m3_ellipse = trajectory_eva_3(ellipse)
-m3_line_fold = 0
 m3_playground = trajectory_eva_3(playground)
 m3_retreat = trajectory_eva_3(retreat)
 m3_sin = trajectory_eva_3(sin)
@@ -201,27 +217,27 @@ m3_roll = trajectory_eva_3(roll)
 
 
 # method 1
-original_numbers = []
-original_numbers.append(m1_line_x)
-original_numbers.append(m1_line_xy)
-original_numbers.append(m1_line_xyz)
-original_numbers.append(m1_circle)
-original_numbers.append(m1_ouroboros)
-original_numbers.append(m1_ouroboros_z)
-original_numbers.append(m1_ouroboros_plus)
-original_numbers.append(m1_ouroboros_plus_z)
-original_numbers.append(m1_corss)
-original_numbers.append(m1_ellipse)
-original_numbers.append(m1_line_fold)
-original_numbers.append(m1_playground)
-original_numbers.append(m1_retreat)
-original_numbers.append(m1_sin)
-original_numbers.append(m1_spiral_v)
-original_numbers.append(m1_spiral_h)
-original_numbers.append(m1_swirl)
-original_numbers.append(m1_tornado)
-original_numbers.append(m1_wheel)
-original_numbers.append(m1_roll)
+# original_numbers = []
+# original_numbers.append(m1_line_x)
+# original_numbers.append(m1_line_xy)
+# original_numbers.append(m1_line_xyz)
+# original_numbers.append(m1_circle)
+# original_numbers.append(m1_ouroboros)
+# original_numbers.append(m1_ouroboros_z)
+# original_numbers.append(m1_ouroboros_plus)
+# original_numbers.append(m1_ouroboros_plus_z)
+# original_numbers.append(m1_corss)
+# original_numbers.append(m1_ellipse)
+# original_numbers.append(m1_line_fold)
+# original_numbers.append(m1_playground)
+# original_numbers.append(m1_retreat)
+# original_numbers.append(m1_sin)
+# original_numbers.append(m1_spiral_v)
+# original_numbers.append(m1_spiral_h)
+# original_numbers.append(m1_swirl)
+# original_numbers.append(m1_tornado)
+# original_numbers.append(m1_wheel)
+# original_numbers.append(m1_roll)
 
 # method 2
 # original_numbers = []
@@ -247,28 +263,27 @@ original_numbers.append(m1_roll)
 # original_numbers.append(m2_roll)
 
 # method 3
-# original_numbers = []
-# original_numbers.append(m3_line_x)
-# original_numbers.append(m3_line_xy)
-# original_numbers.append(m3_line_xyz)
-# original_numbers.append(m3_circle)
-# original_numbers.append(m3_ouroboros)
-# original_numbers.append(m3_ouroboros_z)
-# original_numbers.append(m3_ouroboros_plus)
-# original_numbers.append(m3_ouroboros_plus_z)
-# original_numbers.append(m3_corss)
-# original_numbers.append(m3_ellipse)
-# original_numbers.append(m3_line_fold)
-# original_numbers.append(m3_playground)
-# original_numbers.append(m3_retreat)
-# original_numbers.append(m3_sin)
-# original_numbers.append(m3_spiral_v)
-# original_numbers.append(m3_spiral_h)
-# original_numbers.append(m3_swirl)
-# original_numbers.append(m3_tornado)
-# original_numbers.append(m3_wheel)
-# original_numbers.append(m3_roll)
-
+original_numbers = []
+original_numbers.append(m3_line_x)
+original_numbers.append(m3_line_xy)
+original_numbers.append(m3_line_xyz)
+original_numbers.append(m3_circle)
+original_numbers.append(m3_ouroboros)
+original_numbers.append(m3_ouroboros_z)
+original_numbers.append(m3_ouroboros_plus)
+original_numbers.append(m3_ouroboros_plus_z)
+original_numbers.append(m3_corss)
+original_numbers.append(m3_ellipse)
+original_numbers.append(m3_playground)
+original_numbers.append(m3_retreat)
+original_numbers.append(m3_sin)
+original_numbers.append(m3_spiral_v)
+original_numbers.append(m3_spiral_h)
+original_numbers.append(m3_swirl)
+original_numbers.append(m3_tornado)
+original_numbers.append(m3_wheel)
+original_numbers.append(m3_roll)
+# print("original_numbers: ", original_numbers)
 
 def scale_to_integer_range(values, new_min, new_max):
     min_original = min(values)
@@ -279,7 +294,7 @@ def scale_to_integer_range(values, new_min, new_max):
     ]
     return scaled_values
 
-scaled_values = scale_to_integer_range(original_numbers, 1, 10)
+scaled_values = scale_to_integer_range(original_numbers, 0, 10)
 
 
 # Create a colormap
@@ -317,9 +332,10 @@ colors = {
 
 # Plotting the bar chart
 plt.bar(range(len(scaled_values)), scaled_values, color=colors)
-plt.xlabel('Trajectory')
-plt.ylabel('Complexity (Scaled)')
+plt.xlabel('Trajectory', fontsize=12)
+plt.ylabel('Complexity (Scaled)',fontsize=12)
 plt.title('Complexity of Trajectories')
-plt.xticks(range(len(scaled_values)), ['Line X', 'Line XY', 'Line XYZ', 'Circle', 'Ouroboros', 'Ouroboros_z', 'Ouroboros_plus', 'Ouroboros_plus_z', 'Cross', 'Ellipse', 'Line fold', 'Playground', 'Retreat', 'Sin', 'Spiral V', 'Spiral H', 'Swirl', 'Tornado', 'Wheel', 'Roll'], fontsize=8, rotation=45)
+plt.xticks(range(len(scaled_values)), ['Line X', 'Line XY', 'Line XYZ', 'Circle', 'Ouroboros', 'Ouroboros_z', 'Ouroboros_plus', 'Ouroboros_plus_z', 'Cross', 'Ellipse', 'Playground', 'Retreat', 'Sin', 'Spiral V', 'Spiral H', 'Swirl', 'Tornado', 'Wheel', 'Roll'], fontsize=10, rotation=30)
 plt.show()
-print("scaled_values: ", scaled_values)
+
+# print("scaled_values: ", scaled_values)

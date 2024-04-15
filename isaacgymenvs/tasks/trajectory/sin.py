@@ -4,9 +4,9 @@ import numpy as np
 
 
 def generate_sin_points(num_points):
-    t = np.linspace(0, np.pi/2, num_points)
-    x = t
-    y = np.sin(8*x)/4
+    t = np.linspace(0, np.pi/4, num_points)
+    x = t*2
+    y = np.sin(8*t)/2
     z = np.ones_like(t)
     return x, y, z
 

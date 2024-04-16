@@ -5,8 +5,8 @@ import numpy as np
 
 def generate_tornado_points(num_points):
     theta = np.linspace(-4*np.pi, 4*np.pi, num_points)
-    z = np.linspace(0, 3 , num_points)
-    r = z
+    r = np.linspace(0, 3 , num_points)
+    z = r
     x = r*np.cos(theta)
     y = r*np.sin(theta)
     

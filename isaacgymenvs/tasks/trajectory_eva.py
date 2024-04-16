@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
-
+import math
 def trajectory_eva_1(data):
         
     x_coords = data.iloc[:, 0]
@@ -93,7 +93,7 @@ def trajectory_eva_2(data):
 
 
 def trajectory_eva_3(data):
-    # print("data: ")
+    print("data: ")
     num_elements = len(data)
     angles = []
     lengths = []
@@ -113,6 +113,7 @@ def trajectory_eva_3(data):
         angle_deg = np.degrees(angle_rad)
         angles.append(angle_deg)
 
+
     # sun of lengths of the trajectory
     for i in range(num_elements-1):
         point1 = data.loc[i, ['X', 'Y', 'Z']]
@@ -121,9 +122,10 @@ def trajectory_eva_3(data):
         norm_vector = np.linalg.norm(vector)
         lengths.append(norm_vector)
     
-    # print("angles: ", sum(angles))
-    # print("lengths: ", sum(lengths))
+    print("angles: ", sum(angles))
+    print("lengths: ", sum(lengths))
     C = sum(angles)/np.log(sum(lengths))
+
     return C
 
         
@@ -161,7 +163,7 @@ roll = pd.read_csv('isaacgymenvs/tasks/trajectory/roll.csv')
 # m1_ouroboros_plus_z = trajectory_eva_1(ouroboros_plus_z)
 # m1_corss = trajectory_eva_1(corss)
 # m1_ellipse = trajectory_eva_1(ellipse)
-# m1_line_fold = trajectory_eva_1(line_fold)
+
 # m1_playground = trajectory_eva_1(playground)
 # m1_retreat = trajectory_eva_1(retreat)
 # m1_sin = trajectory_eva_1(sin)
@@ -183,7 +185,6 @@ roll = pd.read_csv('isaacgymenvs/tasks/trajectory/roll.csv')
 # m2_ouroboros_plus_z = trajectory_eva_2(ouroboros_plus_z)
 # m2_corss = trajectory_eva_2(corss)
 # m2_ellipse = trajectory_eva_2(ellipse)
-# m2_line_fold = trajectory_eva_2(line_fold)
 # m2_playground = trajectory_eva_2(playground)
 # m2_retreat = trajectory_eva_2(retreat)
 # m2_sin = trajectory_eva_2(sin)
@@ -228,7 +229,6 @@ m3_roll = trajectory_eva_3(roll)
 # original_numbers.append(m1_ouroboros_plus_z)
 # original_numbers.append(m1_corss)
 # original_numbers.append(m1_ellipse)
-# original_numbers.append(m1_line_fold)
 # original_numbers.append(m1_playground)
 # original_numbers.append(m1_retreat)
 # original_numbers.append(m1_sin)
@@ -251,7 +251,6 @@ m3_roll = trajectory_eva_3(roll)
 # original_numbers.append(m2_ouroboros_plus_z)
 # original_numbers.append(m2_corss)
 # original_numbers.append(m2_ellipse)
-# original_numbers.append(m2_line_fold)
 # original_numbers.append(m2_playground)
 # original_numbers.append(m2_retreat)
 # original_numbers.append(m2_sin)
@@ -283,7 +282,7 @@ original_numbers.append(m3_swirl)
 original_numbers.append(m3_tornado)
 original_numbers.append(m3_wheel)
 original_numbers.append(m3_roll)
-# print("original_numbers: ", original_numbers)
+print("original_numbers: ", original_numbers)
 
 def scale_to_integer_range(values, new_min, new_max):
     min_original = min(values)

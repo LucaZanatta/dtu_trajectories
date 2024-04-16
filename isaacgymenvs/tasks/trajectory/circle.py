@@ -5,7 +5,7 @@ import numpy as np
 
 def generate_circle_points(num_points):
     t = np.linspace(0, 2*np.pi, num_points)
-    radius = 1
+    radius = 0.5
     x = radius - radius*np.cos(t)
     y = radius*np.sin(t)
     z = np.ones_like(t)

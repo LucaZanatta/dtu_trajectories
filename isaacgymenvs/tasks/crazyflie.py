@@ -341,8 +341,9 @@ def compute_crazyflie_reward(last_target_dist,root_positions, target_root_positi
     # print("target_next_positions: ", target_next_positions)
     # print("target_next_next_positions: ", target_next_next_positions)
     pos_reward = target_dist.clone()
-    pos_reward[(last_target_dist-target_dist)<0] = -target_dist[(last_target_dist-target_dist)<0]
-    pos_reward[(last_target_dist-target_dist)>=0] = 1/(1+target_dist[(last_target_dist-target_dist)>=0]**2)
+    # pos_reward[(last_target_dist-target_dist)<0] = -target_dist[(last_target_dist-target_dist)<0]
+    pos_reward[(last_target_dist-target_dist)<0] = 0
+    pos_reward[(last_target_dist-target_dist)>=0] = 1/(0.5+target_dist[(last_target_dist-target_dist)>=0]**2)
 
     # uprightness
     ups = quat_axis(root_quats, 2)

@@ -88,9 +88,9 @@ cfg = PPO_DEFAULT_CONFIG.copy()
 cfg["rollouts"] = 16  # memory_size 8
 cfg["learning_epochs"] = 8 # 8
 cfg["mini_batches"] = 4  # 8 * 8192 / 16384 = 4
-cfg["discount_factor"] = 0.99 # 0.99
+cfg["discount_factor"] = 0.98 # 0.99
 cfg["lambda"] = 0.95
-cfg["learning_rate"] = 1e-4 # 1e-3
+cfg["learning_rate"] = 3e-4 # 1e-3
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
 cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.016}
 cfg["random_timesteps"] = 0

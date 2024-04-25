@@ -250,11 +250,12 @@ class Crazyflie(VecTask):
                                                         self.root_quats, 
                                                         self.root_linvels, 
                                                         self.root_angvels)
-        self.friction[:, 0, :] = -0.02*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2       
-        self.forces[:,0,2] = common_thrust
-        self.forces[:,0,:] += self.friction[:,0,:]
+        self.friction[:, 0, :] = 0.002*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2
+        self.friction = torch.clamp(self.friction, -0.02, 0.02)
+        self.forces = self.friction.clone()
+        self.forces[:,0,2] += common_thrust
         
-        velocity = torch.norm(self.root_linvels, dim=-1)
+        
         # print("self.root_linvels: ", self.root_linvels)
         # print("self.controller.body_drone_linvels: ", self.controller.body_drone_linvels)
         # print("sellf.friction: ", self.friction)
@@ -262,34 +263,35 @@ class Crazyflie(VecTask):
         # print("total_torque: ", total_torque)
         
         # Log the value of self.root_linvels in a CSV file
-        with open('root_linvels_log.csv', 'a', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for i in range(self.num_envs):
-                writer.writerow([self.root_linvels[i, 0].item(), self.root_linvels[i, 1].item(), self.root_linvels[i, 2].item()])
+        # velocity = torch.norm(self.root_linvels, dim=-1)
+        # with open('root_linvels_log.csv', 'a', newline='') as csvfile:
+        #     writer = csv.writer(csvfile)
+        #     for i in range(self.num_envs):
+        #         writer.writerow([self.root_linvels[i, 0].item(), self.root_linvels[i, 1].item(), self.root_linvels[i, 2].item()])
         
-        # Log the value of self.controller.body_drone_linvels in a CSV file
-        with open('body_drone_linvels_log.csv', 'a', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for i in range(self.num_envs):
-                writer.writerow([self.controller.body_drone_linvels[i, 0].item(), self.controller.body_drone_linvels[i, 1].item(), self.controller.body_drone_linvels[i, 2].item()])
+        # # Log the value of self.controller.body_drone_linvels in a CSV file
+        # with open('body_drone_linvels_log.csv', 'a', newline='') as csvfile:
+        #     writer = csv.writer(csvfile)
+        #     for i in range(self.num_envs):
+        #         writer.writerow([self.controller.body_drone_linvels[i, 0].item(), self.controller.body_drone_linvels[i, 1].item(), self.controller.body_drone_linvels[i, 2].item()])
         
-        # Log the value of self.friction in a CSV file
-        with open('friction_log.csv', 'a', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for i in range(self.num_envs):
-                writer.writerow([self.friction[i, 0, 0].item(), self.friction[i, 0, 1].item(), self.friction[i, 0, 2].item()])
+        # # Log the value of self.friction in a CSV file
+        # with open('friction_log.csv', 'a', newline='') as csvfile:
+        #     writer = csv.writer(csvfile)
+        #     for i in range(self.num_envs):
+        #         writer.writerow([self.friction[i, 0, 0].item(), self.friction[i, 0, 1].item(), self.friction[i, 0, 2].item()])
             
-        # Log the value of self.forces in a CSV file
-        with open('forces_log.csv', 'a', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for i in range(self.num_envs):
-                writer.writerow([self.forces[i, 0, 0].item(), self.forces[i, 0, 1].item(), self.forces[i, 0, 2].item()])
+        # # Log the value of self.forces in a CSV file
+        # with open('forces_log.csv', 'a', newline='') as csvfile:
+        #     writer = csv.writer(csvfile)
+        #     for i in range(self.num_envs):
+        #         writer.writerow([self.forces[i, 0, 0].item(), self.forces[i, 0, 1].item(), self.forces[i, 0, 2].item()])
             
-        # Log the value of velocity in a CSV file
-        with open('velocity_log.csv', 'a', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            for i in range(self.num_envs):
-                writer.writerow([velocity[i].item()])
+        # # Log the value of velocity in a CSV file
+        # with open('velocity_log.csv', 'a', newline='') as csvfile:
+        #     writer = csv.writer(csvfile)
+        #     for i in range(self.num_envs):
+        #         writer.writerow([velocity[i].item()])
         
         
         # clear actions for reset envs
@@ -404,13 +406,12 @@ def compute_crazyflie_reward(last_target_dist,root_positions, target_root_positi
     # velocity
     velocity = torch.norm(root_linvels, dim=-1)
     velocity_reward = velocity.clone()
-    velocity_reward[velocity_reward>1] = -velocity_reward[velocity_reward>1]*0.1
-    velocity_reward[velocity_reward<=1] = 0.3*velocity_reward[velocity_reward<=1]
-    # print("velocity: ", velocity)
-    if(velocity >= 5).any():
-        print("##################################attention: velocity is too high###################################")
-    reward = pos_reward + access + velocity_reward + pos_reward*velocity
-    reward = pos_reward + access + velocity_reward
+    velocity_reward[velocity>=1] = -velocity_reward[velocity>=1]
+    velocity_reward[velocity<=0.2] = velocity_reward[velocity<=0.2]
+
+    # reward = pos_reward + access + velocity_reward + pos_reward*velocity
+    
+    reward = pos_reward + access + 0.1*velocity_reward
     # print("pos_reward: ", pos_reward)
     # print("access: ", access)
     # print("reward: ", reward)

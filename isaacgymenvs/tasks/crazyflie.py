@@ -264,31 +264,31 @@ class Crazyflie(VecTask):
         
         # Log the value of self.root_linvels in a CSV file
         # velocity = torch.norm(self.root_linvels, dim=-1)
-        # with open('root_linvels_log.csv', 'a', newline='') as csvfile:
+        # with open('log/root_linvels_log.csv', 'a', newline='') as csvfile:
         #     writer = csv.writer(csvfile)
         #     for i in range(self.num_envs):
         #         writer.writerow([self.root_linvels[i, 0].item(), self.root_linvels[i, 1].item(), self.root_linvels[i, 2].item()])
         
         # # Log the value of self.controller.body_drone_linvels in a CSV file
-        # with open('body_drone_linvels_log.csv', 'a', newline='') as csvfile:
+        # with open('log/body_drone_linvels_log.csv', 'a', newline='') as csvfile:
         #     writer = csv.writer(csvfile)
         #     for i in range(self.num_envs):
         #         writer.writerow([self.controller.body_drone_linvels[i, 0].item(), self.controller.body_drone_linvels[i, 1].item(), self.controller.body_drone_linvels[i, 2].item()])
         
         # # Log the value of self.friction in a CSV file
-        # with open('friction_log.csv', 'a', newline='') as csvfile:
+        # with open('log/friction_log.csv', 'a', newline='') as csvfile:
         #     writer = csv.writer(csvfile)
         #     for i in range(self.num_envs):
         #         writer.writerow([self.friction[i, 0, 0].item(), self.friction[i, 0, 1].item(), self.friction[i, 0, 2].item()])
             
         # # Log the value of self.forces in a CSV file
-        # with open('forces_log.csv', 'a', newline='') as csvfile:
+        # with open('log/forces_log.csv', 'a', newline='') as csvfile:
         #     writer = csv.writer(csvfile)
         #     for i in range(self.num_envs):
         #         writer.writerow([self.forces[i, 0, 0].item(), self.forces[i, 0, 1].item(), self.forces[i, 0, 2].item()])
             
         # # Log the value of velocity in a CSV file
-        # with open('velocity_log.csv', 'a', newline='') as csvfile:
+        # with open('log/velocity_log.csv', 'a', newline='') as csvfile:
         #     writer = csv.writer(csvfile)
         #     for i in range(self.num_envs):
         #         writer.writerow([velocity[i].item()])
@@ -389,7 +389,7 @@ def compute_crazyflie_reward(last_target_dist,root_positions, target_root_positi
     # print("target_next_positions: ", target_next_positions)
     # print("target_next_next_positions: ", target_next_next_positions)
     pos_reward = target_dist.clone()
-    pos_reward[(last_target_dist-target_dist)<0] = -2*target_dist[(last_target_dist-target_dist)<0]
+    pos_reward[(last_target_dist-target_dist)<0] = -5*target_dist[(last_target_dist-target_dist)<0]
     # pos_reward[(last_target_dist-target_dist)<0] = 0
     pos_reward[(last_target_dist-target_dist)>=0] = 0.5*(1/(1+10*target_dist[(last_target_dist-target_dist)>=0])+d/(1+10*target_dist_next[(last_target_dist-target_dist)>=0])+d*d/(1+10*target_dist_next_next[(last_target_dist-target_dist)>=0]))
     # print("last target - target: ", last_target_dist-target_dist)
@@ -406,8 +406,8 @@ def compute_crazyflie_reward(last_target_dist,root_positions, target_root_positi
     # velocity
     velocity = torch.norm(root_linvels, dim=-1)
     velocity_reward = velocity.clone()
-    velocity_reward[velocity>=1] = -velocity_reward[velocity>=1]
-    velocity_reward[velocity<=0.2] = velocity_reward[velocity<=0.2]
+    velocity_reward[velocity>=2] = -velocity_reward[velocity>=2]
+    velocity_reward[velocity<=0.5] = -velocity_reward[velocity<=0.5]
 
     # reward = pos_reward + access + velocity_reward + pos_reward*velocity
     
@@ -435,3 +435,31 @@ def compute_crazyflie_reward(last_target_dist,root_positions, target_root_positi
 
 
     return reward, reset, next, last_target_dist
+
+    @torch.jit.script
+    def copysign(a, b):
+        # type: (float, Tensor) -> Tensor
+        a = torch.tensor(a, device=b.device, dtype=torch.float).repeat(b.shape[0])
+        
+        return torch.abs(a) * torch.sign(b)
+
+    @torch.jit.script
+    def get_euler_xyz(q):
+        qx, qy, qz, qw = 0, 1, 2, 3
+        # roll (x-axis rotation)
+        sinr_cosp = 2.0 * (q[:, qw] * q[:, qx] + q[:, qy] * q[:, qz])
+        cosr_cosp = q[:, qw] * q[:, qw] - q[:, qx] * \
+            q[:, qx] - q[:, qy] * q[:, qy] + q[:, qz] * q[:, qz]
+        roll = torch.atan2(sinr_cosp, cosr_cosp)
+
+        # pitch (y-axis rotation)
+        sinp = 2.0 * (q[:, qw] * q[:, qy] - q[:, qz] * q[:, qx])
+        pitch = torch.where(torch.abs(sinp) >= 1, copysign(np.pi / 2.0, sinp), torch.asin(sinp))
+
+        # yaw (z-axis rotation)
+        siny_cosp = 2.0 * (q[:, qw] * q[:, qz] + q[:, qx] * q[:, qy])
+        cosy_cosp = q[:, qw] * q[:, qw] + q[:, qx] * \
+            q[:, qx] - q[:, qy] * q[:, qy] - q[:, qz] * q[:, qz]
+        yaw = torch.atan2(siny_cosp, cosy_cosp)
+
+        return roll % (2*np.pi), pitch % (2*np.pi), yaw % (2*np.pi)

@@ -79,9 +79,10 @@ class Crazyflie(VecTask):
         # CTBR added
         self.controller = CTRBctrl(self.num_envs, device=self.device)
         self.friction = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device)
-        self.torque = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device)
+        # self.torque = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device)
         # trajectory
         self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
+        self.trajectory_len = torch.tensor(len(self.trajectory), dtype=torch.int32, device=self.device)
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xy.csv')
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xyz.csv')
         # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
@@ -247,7 +248,7 @@ class Crazyflie(VecTask):
         actions = _actions.to(self.device)
         
         # NN and CTBR
-        self.torque, common_thrust = self.controller.update(actions, 
+        total_torque, common_thrust = self.controller.update(actions, 
                                                         self.root_quats, 
                                                         self.root_linvels, 
                                                         self.root_angvels)
@@ -297,30 +298,19 @@ class Crazyflie(VecTask):
         #     writer = csv.writer(csvfile)
         #     for i in range(self.num_envs):
         #         writer.writerow([velocity[i].item()])
-        
-        
-        # NN only         
-        # self.forces[:,0,0] = actions[:,0]
-        # self.forces[:,0,1] = actions[:,1]
-        # self.forces[:,0,2] = actions[:,2]
-        # self.torque[:,0,0] = actions[:,3]
-        # self.torque[:,0,1] = actions[:,4]
-        # self.torque[:,0,2] = actions[:,5]
-        
+
         
 
         # clear actions for reset envs
         self.forces[reset_env_ids] = 0.0
-        self.torque[reset_env_ids] = 0.0
+        total_torque[reset_env_ids] = 0.0
 
-        
-        
         # self.gym.apply_rigid_body_force_tensors(self.sim, gymtorch.unwrap_tensor(self.forces), None, gymapi.LOCAL_SPACE)
 
         # Apply forces and torques to the drone
         self.gym.apply_rigid_body_force_tensors( self.sim, 
                                             gymtorch.unwrap_tensor(self.forces), 
-                                            gymtorch.unwrap_tensor(self.torque),
+                                            gymtorch.unwrap_tensor(total_torque),
                                             gymapi.LOCAL_SPACE)
   
         
@@ -364,6 +354,8 @@ class Crazyflie(VecTask):
     
     def compute_reward(self):
         self.rew_buf[:], self.reset_buf[:], self.reset_target[:], self.last_target_dist[:] = compute_crazyflie_reward(
+            self.trajectory_len, 
+            self.target_index,
             self.last_target_dist,
             self.root_positions,
             self.target_root_positions,
@@ -382,34 +374,37 @@ class Crazyflie(VecTask):
 ###=========================jit functions=========================###
  
 @torch.jit.script
-def compute_crazyflie_reward(last_target_dist,root_positions, target_root_positions, target_next_positions, target_next_next_positions ,root_quats, root_linvels, root_angvels, reset_buf, progress_buf, max_episode_length,reset_target):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor,Tensor, Tensor, Tensor, Tensor, float, Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor]
+def compute_crazyflie_reward(trajectory_len ,target_index, last_target_dist,root_positions, target_root_positions, target_next_positions, target_next_next_positions ,root_quats, root_linvels, root_angvels, reset_buf, progress_buf, max_episode_length,reset_target):
+    # type: (Tensor,Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor,Tensor, Tensor, Tensor, Tensor, float, Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor]
 
+    # print("trajectory_len: ", trajectory_len)
     # distance to target
     target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
     target_dist_next = torch.sqrt(torch.square(target_next_positions - root_positions).sum(-1))
     target_dist_next_next = torch.sqrt(torch.square(target_next_next_positions - root_positions).sum(-1))
     d = 0.4
-    # pos_reward = 1 / (1 + target_dist * target_dist) + d / (1 + target_dist_next * target_dist_next) + d*d / (1 + target_dist_next_next * target_dist_next_next)
+    pos_reward = 1 / (1 + target_dist * target_dist) + d / (1 + target_dist_next * target_dist_next) + d*d / (1 + target_dist_next_next * target_dist_next_next)
     # pos_reward = 1 / (1 + 5*target_dist) + d / (1 + 5*target_dist_next) + d*d / (1 + 5*target_dist_next_next)
     # pos_reward = 1/(0.5 + target_dist) + d/(0.5 + target_dist_next) + d**2/(0.5 + target_dist_next_next)
 
     access = target_dist.clone()
     access[target_dist>=0.01] = 0
-    access[target_dist<0.01] = 10
+    access[target_dist<0.01] = 100
     # print("root_positions: ", root_positions)
     # print("target_root_positions: ", target_root_positions)
     # print("target_dist: ", target_dist)
     # print("target_next_positions: ", target_next_positions)
     # print("target_next_next_positions: ", target_next_next_positions)
-    pos_reward = target_dist.clone()
+    pos_reward2 = target_dist.clone()
     # pos_reward[(last_target_dist-target_dist)<=0] = -5*last_target_dist[(last_target_dist-target_dist)<=0]
-    pos_reward[(last_target_dist-target_dist)<=0] = 0
-    pos_reward[(last_target_dist-target_dist)>0] = 0.8/(1+10*target_dist[(last_target_dist-target_dist)>0])+d/(1+10*target_dist_next[(last_target_dist-target_dist)>0])+d*d/(1+10*target_dist_next_next[(last_target_dist-target_dist)>0])
+    pos_reward2[(last_target_dist-target_dist)<=0] = 0
+    pos_reward2[(last_target_dist-target_dist)>0] = 1
+    # pos_reward2[(last_target_dist-target_dist)>0] = 0.8/(1+10*target_dist[(last_target_dist-target_dist)>0])+d/(1+10*target_dist_next[(last_target_dist-target_dist)>0])+d*d/(1+10*target_dist_next_next[(last_target_dist-target_dist)>0])
     # print("last target - target: ", last_target_dist-target_dist)
     # print("target_dist: ", target_dist[(last_target_dist-target_dist)>=0])
     # uprightness
     ups = quat_axis(root_quats, 2)
+    # print("ups: ", ups)
     tiltage = torch.abs(1 - ups[..., 2])
     up_reward = 1.0 / (1.0 + tiltage * tiltage)
 
@@ -421,11 +416,13 @@ def compute_crazyflie_reward(last_target_dist,root_positions, target_root_positi
     velocity = torch.norm(root_linvels, dim=-1)
     velocity_reward = velocity.clone()
     # velocity_reward[velocity>=1] = -velocity_reward[velocity>=1]
-    # velocity_reward[velocity<=0.2] = -1/(1 + velocity_reward[velocity<=0.2])
-    velocity_reward[velocity>=1.5] = 0
+    # velocity_reward[velocity<=0.2] = 0
+    # velocity_reward[velocity>=1.5] = 0
+    velocity_reward[target_index < trajectory_len*4/5] = velocity[target_index < trajectory_len*4/5]
+    velocity_reward[target_index >= trajectory_len*4/5] = 1/(1+velocity[target_index >= trajectory_len*4/5])
     
-    # reward = pos_reward + access + 0.1*velocity_reward + 0.1*pos_reward*velocity
-    reward = access + pos_reward
+    reward = pos_reward + access + pos_reward2*velocity_reward
+    # reward = access + pos_reward 
     # reward[target_dist==target_dist_next] = pos_reward[target_dist==target_dist_next] + access[target_dist==target_dist_next]
     
     # reward[target_dist == target_dist_next] = pos_reward[target_dist == target_dist_next] + access[target_dist == target_dist_next]

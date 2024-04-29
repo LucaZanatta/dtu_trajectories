@@ -38,6 +38,7 @@ from CTBRcontroller import CTRBctrl
 import torch
 import pandas as pd
 import csv
+from isaacgymenvs.utils.torch_jit_utils import copysign, get_euler_xyz
 # from skrl.utils import isaacgym_utils
 
 class Crazyflie(VecTask):
@@ -48,7 +49,7 @@ class Crazyflie(VecTask):
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
         
         num_observations = 18
-        num_actions = 4
+        num_actions = 6
         
         bodies_per_env = 1
         
@@ -70,7 +71,7 @@ class Crazyflie(VecTask):
         self.initial_root_states = self.root_states.clone()
 
         # control tensors
-        self.thrusts = torch.zeros((self.num_envs, 4), dtype=torch.float32, device=self.device, requires_grad=False)
+        self.thrusts = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device, requires_grad=False)
         self.forces = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device, requires_grad=False)
 
         self.all_actor_indices = torch.arange(self.num_envs, dtype=torch.int32, device=self.device)
@@ -78,7 +79,7 @@ class Crazyflie(VecTask):
         # CTBR added
         self.controller = CTRBctrl(self.num_envs, device=self.device)
         self.friction = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device)
-        
+        self.torque = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device)
         # trajectory
         self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
         # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xy.csv')
@@ -246,14 +247,18 @@ class Crazyflie(VecTask):
         actions = _actions.to(self.device)
         
         # NN and CTBR
-        total_torque, common_thrust = self.controller.update(actions, 
+        self.torque, common_thrust = self.controller.update(actions, 
                                                         self.root_quats, 
                                                         self.root_linvels, 
                                                         self.root_angvels)
-        self.friction[:, 0, :] = 0.002*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2
-        self.friction = torch.clamp(self.friction, -0.02, 0.02)
+        # self.friction[:, 0, :] = 0.002*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2
+        self.friction[:, 0, :] = -0.005*torch.sign(self.root_linvels)*self.root_linvels**2
+        self.friction = torch.clamp(self.friction, -0.005, 0.005)
+        
+        # # self.forces += self.friction
         self.forces = self.friction.clone()
         self.forces[:,0,2] += common_thrust
+        # print("forces: ", self.forces)
         
         
         # print("self.root_linvels: ", self.root_linvels)
@@ -294,19 +299,28 @@ class Crazyflie(VecTask):
         #         writer.writerow([velocity[i].item()])
         
         
-        # clear actions for reset envs
-        self.forces[reset_env_ids] = 0.0
-        
-        # NN only
+        # NN only         
         # self.forces[:,0,0] = actions[:,0]
         # self.forces[:,0,1] = actions[:,1]
         # self.forces[:,0,2] = actions[:,2]
+        # self.torque[:,0,0] = actions[:,3]
+        # self.torque[:,0,1] = actions[:,4]
+        # self.torque[:,0,2] = actions[:,5]
+        
+        
+
+        # clear actions for reset envs
+        self.forces[reset_env_ids] = 0.0
+        self.torque[reset_env_ids] = 0.0
+
+        
+        
         # self.gym.apply_rigid_body_force_tensors(self.sim, gymtorch.unwrap_tensor(self.forces), None, gymapi.LOCAL_SPACE)
 
         # Apply forces and torques to the drone
         self.gym.apply_rigid_body_force_tensors( self.sim, 
                                             gymtorch.unwrap_tensor(self.forces), 
-                                            gymtorch.unwrap_tensor(total_torque),
+                                            gymtorch.unwrap_tensor(self.torque),
                                             gymapi.LOCAL_SPACE)
   
         
@@ -375,9 +389,9 @@ def compute_crazyflie_reward(last_target_dist,root_positions, target_root_positi
     target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
     target_dist_next = torch.sqrt(torch.square(target_next_positions - root_positions).sum(-1))
     target_dist_next_next = torch.sqrt(torch.square(target_next_next_positions - root_positions).sum(-1))
-    d = 0.5
+    d = 0.4
     # pos_reward = 1 / (1 + target_dist * target_dist) + d / (1 + target_dist_next * target_dist_next) + d*d / (1 + target_dist_next_next * target_dist_next_next)
-    # pos_reward = 1 / (1 + target_dist) + d / (1 + target_dist_next) + d*d / (1 + target_dist_next_next)
+    # pos_reward = 1 / (1 + 5*target_dist) + d / (1 + 5*target_dist_next) + d*d / (1 + 5*target_dist_next_next)
     # pos_reward = 1/(0.5 + target_dist) + d/(0.5 + target_dist_next) + d**2/(0.5 + target_dist_next_next)
 
     access = target_dist.clone()
@@ -389,9 +403,9 @@ def compute_crazyflie_reward(last_target_dist,root_positions, target_root_positi
     # print("target_next_positions: ", target_next_positions)
     # print("target_next_next_positions: ", target_next_next_positions)
     pos_reward = target_dist.clone()
-    pos_reward[(last_target_dist-target_dist)<0] = -5*target_dist[(last_target_dist-target_dist)<0]
-    # pos_reward[(last_target_dist-target_dist)<0] = 0
-    pos_reward[(last_target_dist-target_dist)>=0] = 0.5*(1/(1+10*target_dist[(last_target_dist-target_dist)>=0])+d/(1+10*target_dist_next[(last_target_dist-target_dist)>=0])+d*d/(1+10*target_dist_next_next[(last_target_dist-target_dist)>=0]))
+    # pos_reward[(last_target_dist-target_dist)<=0] = -5*last_target_dist[(last_target_dist-target_dist)<=0]
+    pos_reward[(last_target_dist-target_dist)<=0] = 0
+    pos_reward[(last_target_dist-target_dist)>0] = 0.8/(1+10*target_dist[(last_target_dist-target_dist)>0])+d/(1+10*target_dist_next[(last_target_dist-target_dist)>0])+d*d/(1+10*target_dist_next_next[(last_target_dist-target_dist)>0])
     # print("last target - target: ", last_target_dist-target_dist)
     # print("target_dist: ", target_dist[(last_target_dist-target_dist)>=0])
     # uprightness
@@ -406,12 +420,17 @@ def compute_crazyflie_reward(last_target_dist,root_positions, target_root_positi
     # velocity
     velocity = torch.norm(root_linvels, dim=-1)
     velocity_reward = velocity.clone()
-    velocity_reward[velocity>=2] = -velocity_reward[velocity>=2]
-    velocity_reward[velocity<=0.5] = -velocity_reward[velocity<=0.5]
-
-    # reward = pos_reward + access + velocity_reward + pos_reward*velocity
+    # velocity_reward[velocity>=1] = -velocity_reward[velocity>=1]
+    # velocity_reward[velocity<=0.2] = -1/(1 + velocity_reward[velocity<=0.2])
+    velocity_reward[velocity>=1.5] = 0
     
-    reward = pos_reward + access + 0.1*velocity_reward
+    # reward = pos_reward + access + 0.1*velocity_reward + 0.1*pos_reward*velocity
+    reward = access + pos_reward
+    # reward[target_dist==target_dist_next] = pos_reward[target_dist==target_dist_next] + access[target_dist==target_dist_next]
+    
+    # reward[target_dist == target_dist_next] = pos_reward[target_dist == target_dist_next] + access[target_dist == target_dist_next]
+    # reward = pos_reward + access
+    # reward = pos_reward + access + 0.1*velocity_reward
     # print("pos_reward: ", pos_reward)
     # print("access: ", access)
     # print("reward: ", reward)
@@ -435,31 +454,3 @@ def compute_crazyflie_reward(last_target_dist,root_positions, target_root_positi
 
 
     return reward, reset, next, last_target_dist
-
-    @torch.jit.script
-    def copysign(a, b):
-        # type: (float, Tensor) -> Tensor
-        a = torch.tensor(a, device=b.device, dtype=torch.float).repeat(b.shape[0])
-        
-        return torch.abs(a) * torch.sign(b)
-
-    @torch.jit.script
-    def get_euler_xyz(q):
-        qx, qy, qz, qw = 0, 1, 2, 3
-        # roll (x-axis rotation)
-        sinr_cosp = 2.0 * (q[:, qw] * q[:, qx] + q[:, qy] * q[:, qz])
-        cosr_cosp = q[:, qw] * q[:, qw] - q[:, qx] * \
-            q[:, qx] - q[:, qy] * q[:, qy] + q[:, qz] * q[:, qz]
-        roll = torch.atan2(sinr_cosp, cosr_cosp)
-
-        # pitch (y-axis rotation)
-        sinp = 2.0 * (q[:, qw] * q[:, qy] - q[:, qz] * q[:, qx])
-        pitch = torch.where(torch.abs(sinp) >= 1, copysign(np.pi / 2.0, sinp), torch.asin(sinp))
-
-        # yaw (z-axis rotation)
-        siny_cosp = 2.0 * (q[:, qw] * q[:, qz] + q[:, qx] * q[:, qy])
-        cosy_cosp = q[:, qw] * q[:, qw] + q[:, qx] * \
-            q[:, qx] - q[:, qy] * q[:, qy] - q[:, qz] * q[:, qz]
-        yaw = torch.atan2(siny_cosp, cosy_cosp)
-
-        return roll % (2*np.pi), pitch % (2*np.pi), yaw % (2*np.pi)

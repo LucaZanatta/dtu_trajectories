@@ -51,7 +51,7 @@ def plot_3d_trajectory(x, y, z):
     plt.show()
 
 
-num_points = 20
+num_points = 40
 x, y, z = generate_line_x_points(num_points)
 
 # plot_2d_trajectory(x, y)

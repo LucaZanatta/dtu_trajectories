@@ -284,12 +284,12 @@ class Quadcopter(VecTask):
         actor_indices = self.all_actor_indices[env_ids].flatten()
 
         self.root_states[env_ids] = self.initial_root_states[env_ids]
-        self.root_states[env_ids, 0] += torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
-        self.root_states[env_ids, 1] += torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
-        self.root_states[env_ids, 2] += torch_rand_float(-0.2, 1.5, (num_resets, 1), self.device).flatten()
+        self.root_states[env_ids, 0] += torch_rand_float(-0.001, 0.001, (num_resets, 1), self.device).flatten()
+        self.root_states[env_ids, 1] += torch_rand_float(-0.001, 0.001, (num_resets, 1), self.device).flatten()
+        self.root_states[env_ids, 2] += torch_rand_float(-0.001, 0.001, (num_resets, 1), self.device).flatten()
         self.gym.set_actor_root_state_tensor_indexed(self.sim, self.root_tensor, gymtorch.unwrap_tensor(actor_indices), num_resets)
 
-        self.dof_positions[env_ids] = torch_rand_float(-0.2, 0.2, (num_resets, 8), self.device)
+        self.dof_positions[env_ids] = torch_rand_float(-0.001, 0.001, (num_resets, 8), self.device)
         self.dof_velocities[env_ids] = 0.0
         self.gym.set_dof_state_tensor_indexed(self.sim, self.dof_state_tensor, gymtorch.unwrap_tensor(actor_indices), num_resets)
 
@@ -320,8 +320,8 @@ class Quadcopter(VecTask):
         self.forces[:, 6, 2] = self.thrusts[:, 2]
         self.forces[:, 8, 2] = self.thrusts[:, 3]
         
-        print("self.thrusts: ", self.thrusts)
-        print("self.forces: ", self.forces)
+        # print("self.thrusts: ", self.thrusts)
+        # print("self.forces: ", self.forces)
 
         # clear actions for reset envs
         self.thrusts[reset_env_ids] = 0.0
@@ -390,9 +390,9 @@ def compute_quadcopter_reward(root_positions, root_quats, root_linvels, root_ang
     # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float) -> Tuple[Tensor, Tensor]
 
     # distance to target
-    target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
-                             root_positions[..., 1] * root_positions[..., 1] +
-                             (1 - root_positions[..., 2]) * (1 - root_positions[..., 2]))
+    target_dist = torch.sqrt((0.5-root_positions[..., 0])**2 +
+                             (0.5-root_positions[..., 1])**2 +
+                             (1.5 - root_positions[..., 2])**2)
     pos_reward = 1.0 / (1.0 + target_dist * target_dist)
 
     # uprightness

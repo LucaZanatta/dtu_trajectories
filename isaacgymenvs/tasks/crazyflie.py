@@ -308,7 +308,7 @@ class Crazyflie(VecTask):
         # self.gym.apply_rigid_body_force_tensors(self.sim, gymtorch.unwrap_tensor(self.forces), None, gymapi.LOCAL_SPACE)
 
         # Apply forces and torques to the drone
-        self.gym.apply_rigid_body_force_tensors( self.sim, 
+        self.gym.apply_rigid_body_force_tensors(self.sim, 
                                             gymtorch.unwrap_tensor(self.forces), 
                                             gymtorch.unwrap_tensor(total_torque),
                                             gymapi.LOCAL_SPACE)
@@ -387,9 +387,16 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_target_dist,root
     # pos_reward = 1 / (1 + 5*target_dist) + d / (1 + 5*target_dist_next) + d*d / (1 + 5*target_dist_next_next)
     # pos_reward = 1/(0.5 + target_dist) + d/(0.5 + target_dist_next) + d**2/(0.5 + target_dist_next_next)
 
+    # target_dist = torch.sqrt((root_positions[..., 0])**2 +
+    #                          (root_positions[..., 1])**2 +
+    #                          (1.5 - root_positions[..., 2])**2)
+    # pos_reward = 1.0 / (1.0 + target_dist * target_dist)
+    # print("pos_reward: ", pos_reward)
+
+
     access = target_dist.clone()
     access[target_dist>=0.01] = 0
-    access[target_dist<0.01] = 100
+    access[target_dist<0.01] = 10
     # print("root_positions: ", root_positions)
     # print("target_root_positions: ", target_root_positions)
     # print("target_dist: ", target_dist)
@@ -418,11 +425,12 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_target_dist,root
     # velocity_reward[velocity>=1] = -velocity_reward[velocity>=1]
     # velocity_reward[velocity<=0.2] = 0
     # velocity_reward[velocity>=1.5] = 0
-    velocity_reward[target_index < trajectory_len*4/5] = velocity[target_index < trajectory_len*4/5]
+    velocity_reward[target_index < trajectory_len*4/5] = torch.tanh(velocity[target_index < trajectory_len*4/5])
     velocity_reward[target_index >= trajectory_len*4/5] = 1/(1+velocity[target_index >= trajectory_len*4/5])
     
-    reward = pos_reward + access + pos_reward2*velocity_reward
-    # reward = access + pos_reward 
+    # reward = pos_reward + access + pos_reward2*velocity_reward
+    reward = access + pos_reward*pos_reward2*velocity_reward
+
     # reward[target_dist==target_dist_next] = pos_reward[target_dist==target_dist_next] + access[target_dist==target_dist_next]
     
     # reward[target_dist == target_dist_next] = pos_reward[target_dist == target_dist_next] + access[target_dist == target_dist_next]

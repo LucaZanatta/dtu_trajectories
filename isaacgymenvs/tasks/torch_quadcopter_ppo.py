@@ -52,7 +52,7 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
 
 
 # load and wrap the Isaac Gym environment
-env = load_isaacgym_env_preview4(task_name="Quadcopter", num_envs = 1) # num_envs = 1000
+env = load_isaacgym_env_preview4(task_name="Quadcopter", num_envs = 1000) # num_envs = 1000
 env = wrap_env(env)
 
 device = env.device
@@ -109,7 +109,7 @@ agent = PPO(models=models,
 
 
 # configure and instantiate the RL trainer
-cfg_trainer = {"timesteps": 500000, "headless": True}
+cfg_trainer = {"timesteps": 50000000, "headless": False}
 trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 
 # start training

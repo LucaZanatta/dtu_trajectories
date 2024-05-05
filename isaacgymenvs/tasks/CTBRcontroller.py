@@ -24,7 +24,7 @@ class CTRBctrl():
         diag = 0.04
         rot_tau_coeff = 0.00596
         # Parameters matrix of the drone
-        self.base_A = torch.tensor([ [diag, -diag, -diag, diag], 
+        self.base_A = torch.tensor([ [diag, -diag, -diag, diag],
                                 [-diag, -diag, diag, diag], 
                                 [rot_tau_coeff, -rot_tau_coeff, rot_tau_coeff, -rot_tau_coeff], 
                                 [1,1,1,1]], device=self.device, dtype=torch.float32)
@@ -73,7 +73,6 @@ class CTRBctrl():
 
         ## Overall control action
         self.tau_des[:] = prop + fb_lin
-
 
         # Solve the linear system (thrust mixing) to find actual tagert force on each rotor
         self.B[..., 0:3] = self.tau_des

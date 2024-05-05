@@ -396,7 +396,7 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_target_dist,root
 
     access = target_dist.clone()
     access[target_dist>=0.01] = 0
-    access[target_dist<0.01] = 10
+    access[target_dist<0.01] = 100
     # print("root_positions: ", root_positions)
     # print("target_root_positions: ", target_root_positions)
     # print("target_dist: ", target_dist)
@@ -429,7 +429,7 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_target_dist,root
     velocity_reward[target_index >= trajectory_len*4/5] = 1/(1+velocity[target_index >= trajectory_len*4/5])
     
     # reward = pos_reward + access + pos_reward2*velocity_reward
-    reward = access + pos_reward*pos_reward2*velocity_reward
+    reward = pos_reward
 
     # reward[target_dist==target_dist_next] = pos_reward[target_dist==target_dist_next] + access[target_dist==target_dist_next]
     

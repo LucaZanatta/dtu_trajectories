@@ -49,7 +49,7 @@ class Crazyflie(VecTask):
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
         
         num_observations = 18
-        num_actions = 6
+        num_actions = 4
         
         bodies_per_env = 1
         
@@ -253,13 +253,17 @@ class Crazyflie(VecTask):
                                                         self.root_linvels, 
                                                         self.root_angvels)
         # self.friction[:, 0, :] = 0.002*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2
-        self.friction[:, 0, :] = -0.005*torch.sign(self.root_linvels)*self.root_linvels**2
-        self.friction = torch.clamp(self.friction, -0.005, 0.005)
+        # self.friction[:, 0, :] = -0.005*torch.sign(self.root_linvels)*self.root_linvels**2
+        # self.friction = torch.clamp(self.friction, -0.005, 0.005)
         
         # # self.forces += self.friction
-        self.forces = self.friction.clone()
-        self.forces[:,0,2] += common_thrust
+        # self.forces = self.friction.clone()
+        # self.forces[:,0,2] += common_thrust
         # print("forces: ", self.forces)
+        # self.friction[:, 0, :] = -0.02*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2
+        # self.friction[:, 0, :] = -0.02*torch.sign(self.root_linvels)*self.root_linvels**2       
+        self.forces[:,0,2] = common_thrust
+        # self.forces[:,0,:] += self.friction[:,0,:]
         
         
         # print("self.root_linvels: ", self.root_linvels)
@@ -379,33 +383,33 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_target_dist,root
 
     # print("trajectory_len: ", trajectory_len)
     # distance to target
-    target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
-    target_dist_next = torch.sqrt(torch.square(target_next_positions - root_positions).sum(-1))
-    target_dist_next_next = torch.sqrt(torch.square(target_next_next_positions - root_positions).sum(-1))
-    d = 0.4
-    pos_reward = 1 / (1 + target_dist * target_dist) + d / (1 + target_dist_next * target_dist_next) + d*d / (1 + target_dist_next_next * target_dist_next_next)
+    # target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
+    # target_dist_next = torch.sqrt(torch.square(target_next_positions - root_positions).sum(-1))
+    # target_dist_next_next = torch.sqrt(torch.square(target_next_next_positions - root_positions).sum(-1))
+    # d = 0.4
+    # pos_reward = 1 / (1 + target_dist * target_dist) + d / (1 + target_dist_next * target_dist_next) + d*d / (1 + target_dist_next_next * target_dist_next_next)
     # pos_reward = 1 / (1 + 5*target_dist) + d / (1 + 5*target_dist_next) + d*d / (1 + 5*target_dist_next_next)
     # pos_reward = 1/(0.5 + target_dist) + d/(0.5 + target_dist_next) + d**2/(0.5 + target_dist_next_next)
 
-    # target_dist = torch.sqrt((root_positions[..., 0])**2 +
-    #                          (root_positions[..., 1])**2 +
-    #                          (1.5 - root_positions[..., 2])**2)
-    # pos_reward = 1.0 / (1.0 + target_dist * target_dist)
+    target_dist = torch.sqrt((1 - root_positions[..., 0])**2 +
+                             (root_positions[..., 1])**2 +
+                             (1 - root_positions[..., 2])**2)
+    pos_reward = 1.0 / (1.0 + target_dist * target_dist)
     # print("pos_reward: ", pos_reward)
 
 
-    access = target_dist.clone()
-    access[target_dist>=0.01] = 0
-    access[target_dist<0.01] = 100
+    # access = target_dist.clone()
+    # access[target_dist>=0.01] = 0
+    # access[target_dist<0.01] = 100
     # print("root_positions: ", root_positions)
     # print("target_root_positions: ", target_root_positions)
     # print("target_dist: ", target_dist)
     # print("target_next_positions: ", target_next_positions)
     # print("target_next_next_positions: ", target_next_next_positions)
-    pos_reward2 = target_dist.clone()
+    # pos_reward2 = target_dist.clone()
     # pos_reward[(last_target_dist-target_dist)<=0] = -5*last_target_dist[(last_target_dist-target_dist)<=0]
-    pos_reward2[(last_target_dist-target_dist)<=0] = 0
-    pos_reward2[(last_target_dist-target_dist)>0] = 1
+    # pos_reward2[(last_target_dist-target_dist)<=0] = 0
+    # pos_reward2[(last_target_dist-target_dist)>0] = 1
     # pos_reward2[(last_target_dist-target_dist)>0] = 0.8/(1+10*target_dist[(last_target_dist-target_dist)>0])+d/(1+10*target_dist_next[(last_target_dist-target_dist)>0])+d*d/(1+10*target_dist_next_next[(last_target_dist-target_dist)>0])
     # print("last target - target: ", last_target_dist-target_dist)
     # print("target_dist: ", target_dist[(last_target_dist-target_dist)>=0])
@@ -420,16 +424,17 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_target_dist,root
     spinnage_reward = 1.0 / (1.0 + spinnage * spinnage)
 
     # velocity
-    velocity = torch.norm(root_linvels, dim=-1)
-    velocity_reward = velocity.clone()
+    # velocity = torch.norm(root_linvels, dim=-1)
+    # velocity_reward = velocity.clone()
     # velocity_reward[velocity>=1] = -velocity_reward[velocity>=1]
     # velocity_reward[velocity<=0.2] = 0
     # velocity_reward[velocity>=1.5] = 0
-    velocity_reward[target_index < trajectory_len*4/5] = torch.tanh(velocity[target_index < trajectory_len*4/5])
-    velocity_reward[target_index >= trajectory_len*4/5] = 1/(1+velocity[target_index >= trajectory_len*4/5])
+    # velocity_reward[target_index < trajectory_len*4/5] = torch.tanh(velocity[target_index < trajectory_len*4/5])
+    # velocity_reward[target_index >= trajectory_len*4/5] = 1/(1+velocity[target_index >= trajectory_len*4/5])
     
     # reward = pos_reward + access + pos_reward2*velocity_reward
-    reward = pos_reward
+    reward = pos_reward + pos_reward * (up_reward + spinnage_reward)
+    # reward = pos_reward + pos_reward*spinnage_reward
 
     # reward[target_dist==target_dist_next] = pos_reward[target_dist==target_dist_next] + access[target_dist==target_dist_next]
     
@@ -446,8 +451,8 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_target_dist,root
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
-    die = torch.where(target_dist > 0.5, ones, die)
-    die = torch.where(root_positions[..., 2] < 0.8, ones, die)
+    die = torch.where(target_dist > 2, ones, die)
+    die = torch.where(root_positions[..., 2] < 0.5, ones, die)
     
     # resets due to episode length
     reset = torch.where(progress_buf >= max_episode_length - 1, ones, die)

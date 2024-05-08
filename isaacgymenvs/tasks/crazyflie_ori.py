@@ -227,6 +227,7 @@ class Crazyflie(VecTask):
 
         # clear actions for reset envs
         self.forces[reset_env_ids] = 0.0
+        total_torque[reset_env_ids] = 0.0
         
         # Apply forces and torques to the drone
         self.gym.apply_rigid_body_force_tensors( self.sim, 
@@ -294,13 +295,13 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
     # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor) -> Tuple[Tensor, Tensor, Tensor]
 
     # distance to target
-    target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
+    # target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
     
-    # target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
-    #                          root_positions[..., 1] * root_positions[..., 1] +
-    #                          (2 - root_positions[..., 2]) * (2 - root_positions[..., 2]))    
+    target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
+                             root_positions[..., 1] * root_positions[..., 1] +
+                             (2 - root_positions[..., 2]) * (2 - root_positions[..., 2]))    
     
-    pos_reward = 5 / (0.00001 + target_dist * target_dist)
+    pos_reward = 1 / (1 + target_dist * target_dist)
 
     # print("target_root_positions: ", target_root_positions)
     # print("root_positions: ", root_positions)
@@ -316,7 +317,7 @@ def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, 
 
     # combined reward
     # uprigness and spinning only matter when close to the target
-    reward = pos_reward  #+ pos_reward * (up_reward + spinnage_reward)
+    reward = pos_reward + pos_reward * (up_reward + spinnage_reward)
 
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)

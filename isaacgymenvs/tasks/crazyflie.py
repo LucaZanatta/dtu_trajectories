@@ -255,17 +255,22 @@ class Crazyflie(VecTask):
         # self.friction[:, 0, :] = 0.002*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2
         # self.friction[:, 0, :] = -0.005*torch.sign(self.root_linvels)*self.root_linvels**2
         # self.friction = torch.clamp(self.friction, -0.005, 0.005)
-        
-        # # self.forces += self.friction
-        # self.forces = self.friction.clone()
-        # self.forces[:,0,2] += common_thrust
-        # print("forces: ", self.forces)
-        # self.friction[:, 0, :] = -0.02*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2
-        # self.friction[:, 0, :] = -0.02*torch.sign(self.root_linvels)*self.root_linvels**2       
-        self.forces[:,0,2] = common_thrust
-        # self.forces[:,0,:] += self.friction[:,0,:]
-        
-        
+
+        # 获取无人机的倾斜角度
+        roll, pitch, yaw = get_euler_xyz(self.root_quats)
+
+        # print("roll: ", roll)
+        # print("pitch: ", pitch)
+        # print("yaw: ", yaw)
+        # 计算 common_thrust 在 x、y、z 三个方向上的分量
+        force_x = common_thrust * torch.sin(pitch)
+        force_y = common_thrust * torch.sin(roll)
+        force_z = common_thrust * torch.cos(pitch) * torch.cos(roll)
+
+        # 将这些分量赋值给 self.forces
+        self.forces[:, 0, 0] = force_x
+        self.forces[:, 0, 1] = force_y
+        self.forces[:, 0, 2] = force_z
         # print("self.root_linvels: ", self.root_linvels)
         # print("self.controller.body_drone_linvels: ", self.controller.body_drone_linvels)
         # print("sellf.friction: ", self.friction)

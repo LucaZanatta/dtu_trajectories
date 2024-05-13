@@ -263,8 +263,8 @@ class Crazyflie(VecTask):
         # print("pitch: ", pitch)
         # print("yaw: ", yaw)
         # 计算 common_thrust 在 x、y、z 三个方向上的分量
-        force_x = common_thrust * torch.sin(pitch)
-        force_y = common_thrust * torch.sin(roll)
+        force_x = common_thrust * (torch.sin(yaw) * torch.sin(pitch) + torch.cos(yaw) * torch.sin(roll) * torch.cos(pitch))
+        force_y = common_thrust * (torch.sin(yaw) * torch.sin(roll) * torch.cos(pitch) - torch.cos(yaw) * torch.sin(pitch))
         force_z = common_thrust * torch.cos(pitch) * torch.cos(roll)
 
         # 将这些分量赋值给 self.forces

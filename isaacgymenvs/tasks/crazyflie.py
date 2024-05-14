@@ -246,31 +246,33 @@ class Crazyflie(VecTask):
             self.set_targets(reset_env_ids_target)
             
         actions = _actions.to(self.device)
-        
+        # actions = torch.clamp(actions, 0, 4)
+
         # NN and CTBR
+        # total_torque = actions[:, 0:3].contiguous()
+        # common_thrust = actions[:, 3].contiguous()
+        # total_torque = torch.clamp(total_torque, -0.5, 0.5)
+        # common_thrust = torch.clamp(common_thrust, 0.0, 1.5)
         total_torque, common_thrust = self.controller.update(actions, 
                                                         self.root_quats, 
                                                         self.root_linvels, 
                                                         self.root_angvels)
+        self.forces[:, 0, 2] = common_thrust
         # self.friction[:, 0, :] = 0.002*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2
         # self.friction[:, 0, :] = -0.005*torch.sign(self.root_linvels)*self.root_linvels**2
-        # self.friction = torch.clamp(self.friction, -0.005, 0.005)
-
-        # 获取无人机的倾斜角度
-        roll, pitch, yaw = get_euler_xyz(self.root_quats)
-
+        # self.friction = torch.clamp(self.friction, -0.01, 0.01)
+        # roll, pitch, yaw = get_euler_xyz(self.root_quats)
         # print("roll: ", roll)
         # print("pitch: ", pitch)
         # print("yaw: ", yaw)
-        # 计算 common_thrust 在 x、y、z 三个方向上的分量
-        force_x = common_thrust * (torch.sin(yaw) * torch.sin(pitch) + torch.cos(yaw) * torch.sin(roll) * torch.cos(pitch))
-        force_y = common_thrust * (torch.sin(yaw) * torch.sin(roll) * torch.cos(pitch) - torch.cos(yaw) * torch.sin(pitch))
-        force_z = common_thrust * torch.cos(pitch) * torch.cos(roll)
 
-        # 将这些分量赋值给 self.forces
-        self.forces[:, 0, 0] = force_x
-        self.forces[:, 0, 1] = force_y
-        self.forces[:, 0, 2] = force_z
+        # force_x = common_thrust * (torch.sin(yaw) * torch.sin(pitch) + torch.cos(yaw) * torch.sin(roll) * torch.cos(pitch))
+        # force_y = common_thrust * (torch.sin(yaw) * torch.sin(roll) * torch.cos(pitch) - torch.cos(yaw) * torch.sin(pitch))
+        # force_z = common_thrust * torch.cos(pitch) * torch.cos(roll)
+
+        # self.forces[:, 0, 0] = force_x
+        # self.forces[:, 0, 1] = force_y
+        # self.forces[:, 0, 2] = force_z
         # print("self.root_linvels: ", self.root_linvels)
         # print("self.controller.body_drone_linvels: ", self.controller.body_drone_linvels)
         # print("sellf.friction: ", self.friction)
@@ -403,9 +405,9 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_target_dist,root
     # print("pos_reward: ", pos_reward)
 
 
-    # access = target_dist.clone()
-    # access[target_dist>=0.01] = 0
-    # access[target_dist<0.01] = 100
+    access = target_dist.clone()
+    access[target_dist>=0.01] = 0
+    access[target_dist<0.01] = 10
     # print("root_positions: ", root_positions)
     # print("target_root_positions: ", target_root_positions)
     # print("target_dist: ", target_dist)
@@ -438,7 +440,7 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_target_dist,root
     # velocity_reward[target_index >= trajectory_len*4/5] = 1/(1+velocity[target_index >= trajectory_len*4/5])
     
     # reward = pos_reward + access + pos_reward2*velocity_reward
-    reward = pos_reward + pos_reward * (up_reward + spinnage_reward)
+    reward = pos_reward + access
     # reward = pos_reward + pos_reward*spinnage_reward
 
     # reward[target_dist==target_dist_next] = pos_reward[target_dist==target_dist_next] + access[target_dist==target_dist_next]
@@ -456,7 +458,7 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_target_dist,root
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
-    die = torch.where(target_dist > 2, ones, die)
+    die = torch.where(target_dist > 5, ones, die)
     die = torch.where(root_positions[..., 2] < 0.5, ones, die)
     
     # resets due to episode length

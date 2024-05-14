@@ -32,6 +32,8 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
                                  nn.ELU(),
                                  nn.Linear(256, 256),
                                  nn.ELU(),
+                                 nn.Linear(256, 256),
+                                 nn.ELU(),
                                  nn.Linear(256, 128),
                                  nn.ELU())
 

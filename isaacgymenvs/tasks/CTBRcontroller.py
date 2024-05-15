@@ -19,7 +19,7 @@ class CTRBctrl():
 
         # Drone parameters
         # equations ref https://rpg.ifi.uzh.ch/docs/ICRA15_Faessler.pdf
-        self.real_thrust_upbound = torch.tensor([0.15], device=self.device)
+        self.real_thrust_upbound = torch.tensor([0.15], device=self.device) # 0.15
         self.real_thrust_lowbound = torch.tensor([0.0], device=self.device)
         diag = 0.04
         rot_tau_coeff = 0.00596

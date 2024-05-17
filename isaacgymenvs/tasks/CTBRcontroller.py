@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from isaacgymenvs.utils.torch_jit_utils import copysign
+from isaacgymenvs.utils.torch_jit_utils import copysign, get_euler_xyz
 # from isaacgymenvs.utils.torch_jit_utils 
 
 

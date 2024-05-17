@@ -18,7 +18,7 @@ import wandb
 wandb.login()
 
 # seed for reproducibility
-seed = set_seed()  # e.g. `set_seed(42)` for fixed seed
+seed = set_seed(42)  # e.g. `set_seed(42)` for fixed seed
 
 # define shared model (stochastic and deterministic models) using mixins
 class Shared(GaussianMixin, DeterministicMixin, Model):
@@ -28,11 +28,9 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
         GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
         DeterministicMixin.__init__(self, clip_actions)
 
-        self.net = nn.Sequential(nn.Linear(self.num_observations, 512),
+        self.net = nn.Sequential(nn.Linear(self.num_observations, 128),
                                  nn.ELU(),
-                                 nn.Linear(512, 512),
-                                 nn.ELU(),
-                                 nn.Linear(512, 256),
+                                 nn.Linear(128, 256),
                                  nn.ELU(),
                                  nn.Linear(256, 128),
                                  nn.ELU())
@@ -92,7 +90,7 @@ cfg["learning_epochs"] = 8 # 8
 cfg["mini_batches"] = 4  # 8 * 8192 / 16384 = 4
 cfg["discount_factor"] = 0.99 # 0.99
 cfg["lambda"] = 0.95
-cfg["learning_rate"] = 1e-4 # 1e-3
+cfg["learning_rate"] = 5e-4 # 1e-3
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
 cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.016}
 cfg["random_timesteps"] = 0

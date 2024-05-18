@@ -251,7 +251,7 @@ class Crazyflie(VecTask):
         total_torque = actions[:, 0:3].contiguous()
         common_thrust = actions[:, 3].contiguous()
         total_torque = torch.clamp(total_torque, -0.0005, 0.0005)
-        common_thrust = torch.clamp(common_thrust, 0.0, 0.8)
+        common_thrust = torch.clamp(common_thrust, 0.0, 0.9)
         # total_torque = torch.clamp(total_torque, -0.5, 0.5)
         # common_thrust = torch.clamp(common_thrust, 0.0, 1.5)
         # total_torque, common_thrust = self.controller.update(actions, 
@@ -404,11 +404,11 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_root_positions,r
     target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
     target_dist_next = torch.sqrt(torch.square(target_next_positions - root_positions).sum(-1))
     target_dist_next_next = torch.sqrt(torch.square(target_next_next_positions - root_positions).sum(-1))
-    d = 0.01
+    d = 3
 
     pos_reward = 1/(1 + target_dist*10) + d/(1 + target_dist_next*10) + d**2/(1 + target_dist_next_next*10)
     # pos_reward = 1/(1 + target_dist**2) + d/(1 + target_dist_next**2) + d**2/(1 + target_dist_next_next**2)
-    pos_reward = pos_reward/3
+    pos_reward = pos_reward/6
 
     # target_dist = torch.sqrt((1 - root_positions[..., 0])**2 +
     #                          (root_positions[..., 1])**2 +
@@ -418,8 +418,8 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_root_positions,r
     # print("pos_reward: ", pos_reward)
 
     access = target_dist.clone()
-    access[target_dist>=0.05] = 0
-    access[target_dist<0.05] = 10
+    access[target_dist>=0.09] = 0
+    access[target_dist<0.09] = 10
     
     pos_reward2 = target_dist.clone()
     pos_reward2 = 0*pos_reward2
@@ -429,12 +429,12 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_root_positions,r
     index_f = (target_dist_last_xyz - target_dist_xyz) >= 0
     index_f = torch.all(index_f,dim=1)
     indices = torch.nonzero(index_f).squeeze()
-    pos_reward2[indices] = 1.5 * pos_reward[indices]
+    pos_reward2[indices] = 1 * pos_reward[indices]
     
     pos_reward3 = target_dist.clone()
     pos_reward3 = 0*pos_reward3
     last_target_dist = torch.sqrt(torch.square(target_root_positions - last_root_positions).sum(-1))
-    pos_reward3[(last_target_dist-target_dist)>0] = 1.2 * pos_reward[(last_target_dist-target_dist)>0]
+    pos_reward3[(last_target_dist-target_dist)>0] = 0.5 * pos_reward[(last_target_dist-target_dist)>0]
 
 
     # uprightness
@@ -473,7 +473,7 @@ def compute_crazyflie_reward(trajectory_len ,target_index, last_root_positions,r
     # reset target
     one = torch.ones_like(reset_target)
     next = torch.zeros_like(reset_target)
-    next = torch.where(target_dist < 0.05, one, next)
+    next = torch.where(target_dist < 0.09, one, next)
 
 
     return reward, reset, next, last_root_positions

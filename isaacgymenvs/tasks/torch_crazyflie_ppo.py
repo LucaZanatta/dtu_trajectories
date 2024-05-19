@@ -28,12 +28,14 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
         GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
         DeterministicMixin.__init__(self, clip_actions)
 
-        self.net = nn.Sequential(nn.Linear(self.num_observations, 128),
-                                 nn.ELU(),
-                                 nn.Linear(128, 256),
-                                 nn.ELU(),
-                                 nn.Linear(256, 128),
-                                 nn.ELU())
+        self.net = nn.Sequential(nn.Linear(self.num_observations, 256),
+                                nn.ELU(),
+                                nn.Linear(256, 512),
+                                nn.ELU(),
+                                nn.Linear(512, 256),
+                                nn.ELU(),
+                                nn.Linear(256, 128),
+                                nn.ELU())
 
         self.mean_layer = nn.Linear(128, self.num_actions)
         self.log_std_parameter = nn.Parameter(torch.zeros(self.num_actions))
@@ -87,8 +89,8 @@ models["value"] = models["policy"]  # same instance: shared model
 cfg = PPO_DEFAULT_CONFIG.copy()
 cfg["rollouts"] = 16  # memory_size 8
 cfg["learning_epochs"] = 8 # 8
-cfg["mini_batches"] = 4  # 8 * 8192 / 16384 = 4
-cfg["discount_factor"] = 0.99 # 0.99
+cfg["mini_batches"] = 8  # 8 * 8192 / 16384 = 4
+cfg["discount_factor"] = 0.97 # 0.99
 cfg["lambda"] = 0.95
 cfg["learning_rate"] = 5e-4 # 1e-3
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
@@ -99,7 +101,7 @@ cfg["grad_norm_clip"] = 1.0
 cfg["ratio_clip"] = 0.2
 cfg["value_clip"] = 0.2
 cfg["clip_predicted_values"] = True
-cfg["entropy_loss_scale"] = 0.0
+cfg["entropy_loss_scale"] = 0.05
 cfg["value_loss_scale"] = 1.0
 cfg["kl_threshold"] = 0
 cfg["rewards_shaper"] = lambda rewards, timestep, timesteps: rewards * 0.1
@@ -139,7 +141,7 @@ trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 # # download the trained agent's checkpoint from Hugging Face Hub and load it
 # # path = download_model_from_huggingface("skrl/IsaacGymEnvs-Quadcopter-PPO", filename="agent.pt")
 
-# path = "isaacgymenvs/runs/crazyflie_ppo/checkpoints/best_agent.pt"
+# path = "isaacgymenvs/runs/crazyflie_ppo/checkpoints/agent_152000.pt"
 # agent.load(path)
 # trainer.eval()
 trainer.train()

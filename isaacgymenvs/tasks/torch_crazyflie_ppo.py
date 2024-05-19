@@ -89,7 +89,7 @@ models["value"] = models["policy"]  # same instance: shared model
 cfg = PPO_DEFAULT_CONFIG.copy()
 cfg["rollouts"] = 16  # memory_size 8
 cfg["learning_epochs"] = 8 # 8
-cfg["mini_batches"] = 8  # 8 * 8192 / 16384 = 4
+cfg["mini_batches"] = 4  # 8 * 8192 / 16384 = 4
 cfg["discount_factor"] = 0.97 # 0.99
 cfg["lambda"] = 0.95
 cfg["learning_rate"] = 5e-4 # 1e-3

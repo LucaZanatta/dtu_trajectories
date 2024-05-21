@@ -265,7 +265,7 @@ class Crazyflie(VecTask):
         ######
         # NN #
         ######
-        total_torque = torch.clamp(actions[:, 0:3], -0.001, 0.001) # 0.0004
+        total_torque = torch.clamp(actions[:, 0:3], -0.005, 0.005) # 0.0004
         common_thrust = torch.clamp(actions[:, 3], 0, 1.5) # 1.5
 
 
@@ -494,16 +494,16 @@ def compute_crazyflie_reward(tra_index, trajectory, trajectory_len ,target_index
     ####################################################################################
     # velocity reward, if need drone stay at last point of trajectory, use this reward #
     ####################################################################################
-    velocity = torch.norm(root_linvels, dim=-1)
-    velocity_reward = velocity.clone()
-    velocity_reward[target_index < trajectory_len*4/5] = torch.tanh(velocity[target_index < trajectory_len*4/5])
-    velocity_reward[target_index >= trajectory_len*4/5] = 1/(1+velocity[target_index >= trajectory_len*4/5]*10)
+    # velocity = torch.norm(root_linvels, dim=-1)
+    # velocity_reward = velocity.clone()
+    # velocity_reward[target_index < trajectory_len*4/5] = torch.tanh(velocity[target_index < trajectory_len*4/5])
+    # velocity_reward[target_index >= trajectory_len*4/5] = 1/(1+velocity[target_index >= trajectory_len*4/5]*10)
     
     #############################################################
     # velocity reward, if need loop trajectory, use this reward #
     #############################################################
-    # velocity = torch.norm(root_linvels, dim=-1)
-    # velocity_reward = velocity.clone()
+    velocity = torch.norm(root_linvels, dim=-1)
+    velocity_reward = velocity.clone()
     
     
     #########################

@@ -33,21 +33,21 @@ import matplotlib.pyplot as plt
 # plt.legend()
 # plt.show()
 
-# # Read the data from body_drone_linvels_log.csv
-# forces_log = pd.read_csv('log/forces_log.csv')
-# force_log_x = forces_log.index
+# Read the data from body_drone_linvels_log.csv
+forces_log = pd.read_csv('log/forces_log.csv')
+force_log_x = forces_log.index
 # force_log_y_1 = forces_log.iloc[:, 0]
 # force_log_y_2 = forces_log.iloc[:, 1]
-# force_log_y_3 = forces_log.iloc[:, 2]
+force_log_y_3 = forces_log.iloc[:, 2]
 
 # plt.plot(force_log_x, force_log_y_1, label='force on x', color='r')
 # plt.plot(force_log_x, force_log_y_2, label='force on y', color='g')
-# plt.plot(force_log_x, force_log_y_3, label='force on z', color='b')
-# plt.xlabel('Steps')
-# plt.ylabel('Force')
-# plt.title('force on x y z axis over Steps')
-# plt.legend()
-# plt.show()
+plt.plot(force_log_x, force_log_y_3, label='force on z', color='b')
+plt.xlabel('Steps')
+plt.ylabel('Force')
+plt.title('force on x y z axis over Steps')
+plt.legend()
+plt.show()
 
 # # friction_log
 # friction_log = pd.read_csv('log/friction_log.csv')
@@ -81,24 +81,41 @@ import matplotlib.pyplot as plt
 # plt.legend()
 # plt.show()
 
-reward_log = pd.read_csv('log/reward.csv')
-reward_index = reward_log.index
-reward = reward_log.iloc[:, 0]
+# reward_log = pd.read_csv('log/reward.csv')
+# reward_index = reward_log.index
+# reward = reward_log.iloc[:, 0]
 
-plt.plot(reward_index, reward, label='reward', color='r')
+# plt.plot(reward_index, reward, label='reward', color='r')
+# plt.xlabel('Steps')
+# plt.ylabel('reward')
+# plt.title('reward over Steps')
+# plt.legend()
+# plt.show()
+
+# target_dist_log = pd.read_csv('log/target_dist.csv')
+# target_dist_log_index = target_dist_log.index
+# target_dist = target_dist_log.iloc[:, 0]
+
+# plt.plot(target_dist_log_index, target_dist, label='target_dist', color='r')
+# plt.xlabel('Steps')
+# plt.ylabel('target_dist')
+# plt.title('target_dist over Steps')
+# plt.legend()
+# plt.show()
+
+
+# Read the data from body_drone_linvels_log.csv
+torque_log = pd.read_csv('log/torque_log.csv')
+torque_log_index = torque_log.index
+torque_log_x = torque_log.iloc[:, 0]
+torque_log_y = torque_log.iloc[:, 1]
+torque_log_z = torque_log.iloc[:, 2]
+
+plt.plot(torque_log_index, torque_log_x, label='torque on x', color='r')
+plt.plot(torque_log_index, torque_log_y, label='torque on y', color='g')
+plt.plot(torque_log_index, torque_log_z, label='torque on z', color='b')
 plt.xlabel('Steps')
-plt.ylabel('reward')
-plt.title('reward over Steps')
-plt.legend()
-plt.show()
-
-target_dist_log = pd.read_csv('log/target_dist.csv')
-target_dist_log_index = target_dist_log.index
-target_dist = target_dist_log.iloc[:, 0]
-
-plt.plot(target_dist_log_index, target_dist, label='target_dist', color='r')
-plt.xlabel('Steps')
-plt.ylabel('target_dist')
-plt.title('target_dist over Steps')
+plt.ylabel('torque')
+plt.title('torque on x y z axis over Steps')
 plt.legend()
 plt.show()

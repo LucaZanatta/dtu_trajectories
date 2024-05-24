@@ -28,11 +28,9 @@ class Shared(GaussianMixin, DeterministicMixin, Model):
         GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
         DeterministicMixin.__init__(self, clip_actions)
 
-        self.net = nn.Sequential(nn.Linear(self.num_observations, 256),
+        self.net = nn.Sequential(nn.Linear(self.num_observations, 128),
                                 nn.ELU(),
-                                nn.Linear(256, 512),
-                                nn.ELU(),
-                                nn.Linear(512, 256),
+                                nn.Linear(128, 256),
                                 nn.ELU(),
                                 nn.Linear(256, 128),
                                 nn.ELU())
@@ -90,7 +88,7 @@ cfg = PPO_DEFAULT_CONFIG.copy()
 cfg["rollouts"] = 16  # memory_size must be >= 16
 cfg["learning_epochs"] = 5 # 8 5
 cfg["mini_batches"] = 8  # 8 * 8192 / 16384 = 4 # 8
-cfg["discount_factor"] = 0.98 # 0.99 0.97
+cfg["discount_factor"] = 0.975 # 0.98
 cfg["lambda"] = 0.95
 cfg["learning_rate"] = 1e-3 # 1e-3
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
@@ -112,7 +110,7 @@ cfg["value_preprocessor_kwargs"] = {"size": 1, "device": device}
 # logging to TensorBoard and write checkpoints (in timesteps)
 cfg["experiment"]["write_interval"] = 100
 cfg["experiment"]["checkpoint_interval"] = 1000
-cfg["experiment"]["directory"] = "isaacgymenvs/runs"
+cfg["experiment"]["directory"] = "isaacgymenvs/runs/crazyflie_ppo"
 cfg["experiment"]["experiment_name"] = "crazyflie_ppo"
 cfg["experiment"]["wandb"] = True
 # cfg["experiment"]["wandb_kwargs"] = {}
@@ -141,7 +139,7 @@ trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 # # download the trained agent's checkpoint from Hugging Face Hub and load it
 # # path = download_model_from_huggingface("skrl/IsaacGymEnvs-Quadcopter-PPO", filename="agent.pt")
 
-# path = "isaacgymenvs/runs/crazyflie_ppo/checkpoints/agent_36000.pt"
+# path = "isaacgymenvs/runs/crazyflie_ppo/crazyflie_ppo/checkpoints/agent_123000.pt"
 # agent.load(path)
 # trainer.eval()
 trainer.train()

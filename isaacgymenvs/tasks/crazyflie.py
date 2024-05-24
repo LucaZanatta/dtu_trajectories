@@ -75,9 +75,9 @@ class Crazyflie(VecTask):
         self.controller = CTRBctrl(self.num_envs, device=self.device)
         self.friction = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device)
         # trajectory
-        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
         # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
-        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros.csv')
+        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros.csv')
         self.trajectory_len = torch.tensor(len(self.trajectory), dtype=torch.int32, device=self.device)
         self.tra_index = torch.arange(0, self.trajectory_len, 1, dtype=torch.int32, device=self.device)
         self.tra_index = self.tra_index.unsqueeze(0).expand(self.num_envs, -1)
@@ -223,25 +223,25 @@ class Crazyflie(VecTask):
         # env_ids is the indices of the envs that need to be reset for target
 
         self.target_index_last[env_ids] += 1
-        self.target_index_last[self.target_index_last > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_index_last[self.target_index_last > (self.len_of_traj-1)] = 0 # if need drone stay at last traj, change 0 to self.len_of_traj-1
         self.target_pos_last[env_ids,0] = self.x[self.target_index_last[env_ids]]
         self.target_pos_last[env_ids,1] = self.y[self.target_index_last[env_ids]]
         self.target_pos_last[env_ids,2] = self.z[self.target_index_last[env_ids]]
         
         self.target_index[env_ids] += 1
-        self.target_index[self.target_index > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_index[self.target_index > (self.len_of_traj-1)] = 0 # if need drone stay at last traj, change 0 to self.len_of_traj-1
         self.target_pos[env_ids,0] = self.x[self.target_index[env_ids]]
         self.target_pos[env_ids,1] = self.y[self.target_index[env_ids]]
         self.target_pos[env_ids,2] = self.z[self.target_index[env_ids]]
         
         self.target_index_next[env_ids] += 1
-        self.target_index_next[self.target_index_next > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_index_next[self.target_index_next > (self.len_of_traj-1)] = 0 # if need drone stay at last traj, change 0 to self.len_of_traj-1
         self.target_pos_next[env_ids,0] = self.x[self.target_index_next[env_ids]]
         self.target_pos_next[env_ids,1] = self.y[self.target_index_next[env_ids]]
         self.target_pos_next[env_ids,2] = self.z[self.target_index_next[env_ids]]
         
         self.target_index_next_next[env_ids] += 1
-        self.target_index_next_next[self.target_index_next_next > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_index_next_next[self.target_index_next_next > (self.len_of_traj-1)] = 0 # if need drone stay at last traj, change 0 to self.len_of_traj-1
         self.target_pos_next_next[env_ids,0] = self.x[self.target_index_next_next[env_ids]]
         self.target_pos_next_next[env_ids,1] = self.y[self.target_index_next_next[env_ids]]
         self.target_pos_next_next[env_ids,2] = self.z[self.target_index_next_next[env_ids]]
@@ -266,7 +266,7 @@ class Crazyflie(VecTask):
         # NN #
         ######
         total_torque = torch.clamp(actions[:, 0:3], -0.005, 0.005) # 0.0004
-        common_thrust = torch.clamp(actions[:, 3], 0, 1.5) # 1.5
+        common_thrust = torch.clamp(actions[:, 3], 0, 2) # 1.5
 
 
         ###############
@@ -466,8 +466,8 @@ def compute_crazyflie_reward(tra_index, trajectory, trajectory_len ,target_index
     # w_3 = target_dist_next_next*velocity
     
     w_1 = 1
-    w_2 = 3
-    w_3 = 6
+    w_2 = 4 # 3
+    w_3 = 8 # 6
 
     pos_reward_0 = w_1/(1 + target_dist*10) + w_2/(1 + target_dist_next*10) + w_3/(1 + target_dist_next_next*10)
     pos_reward_0 = pos_reward_0/3
@@ -479,7 +479,7 @@ def compute_crazyflie_reward(tra_index, trajectory, trajectory_len ,target_index
     pos_reward_1 = pos_reward_0.clone()
     pos_reward_1 = 0*pos_reward_0
     last_target_dist = torch.sqrt(torch.square(target_pos - root_pos_last).sum(-1))
-    pos_reward_1[(last_target_dist-target_dist)>0] = 1.5 * pos_reward_0[(last_target_dist-target_dist)>0]
+    pos_reward_1[(last_target_dist-target_dist)>0] = pos_reward_0[(last_target_dist-target_dist)>0]
     
     pos_reward_2 = pos_reward_0.clone()
     pos_reward_2 = 0*pos_reward_0
@@ -488,7 +488,7 @@ def compute_crazyflie_reward(tra_index, trajectory, trajectory_len ,target_index
     index_f = (target_dist_last_xyz - target_dist_xyz) >= 0
     index_f = torch.all(index_f,dim=1)
     indices = torch.nonzero(index_f).squeeze()
-    pos_reward_2[indices] = 3 * pos_reward_0[indices]
+    pos_reward_2[indices] = 1.5*pos_reward_0[indices]
 
 
     ####################################################################################
@@ -506,12 +506,34 @@ def compute_crazyflie_reward(tra_index, trajectory, trajectory_len ,target_index
     velocity_reward = velocity.clone()
     
     
+    # uprightness
+    ups = quat_axis(root_quats, 2)
+    tiltage = torch.abs(1 - ups[..., 2])
+    up_reward = 1.0 / (1.0 + tiltage * tiltage)
+    
+    # spinning
+    spinnage = torch.abs(root_angvels[..., 2])
+    spinnage_reward = 1.0 / (1.0 + spinnage * spinnage)
+    
+    
     #########################
     # total reward function #
     #########################
-    reward = pos_reward_0*0.1 + pos_reward_1 + pos_reward_2 + access + 0.1*velocity_reward*(0.1*pos_reward_0 + pos_reward_1 + pos_reward_2) # fine
+    # reward = pos_reward_0*0.1 + pos_reward_1 + pos_reward_2 + access + 0.1*velocity_reward*(0.1*pos_reward_0 + pos_reward_1 + pos_reward_2) # fine
     # reward = pos_reward_0*(0.1 + pos_reward_1 + pos_reward_2) + access + velocity_reward*pos_reward_0*(0.1 + pos_reward_1 + pos_reward_2) # testing
+    reward = pos_reward_0*0.1 + pos_reward_1 + pos_reward_2 + access + 0.1*velocity_reward*(0.1*pos_reward_0 + pos_reward_1 + pos_reward_2) + 0.001*up_reward + 0.001*spinnage_reward# fine
 
+    # print("reward: ", reward)
+    # print("pos_reward_0: ", pos_reward_0)
+    # print("pos_reward_1: ", pos_reward_1)
+    # print("pos_reward_2: ", pos_reward_2)
+    
+    
+    
+    
+    # print("target_dist: ", target_dist)
+    # print("target_pos: ", target_pos)
+    # print("root_positions: ", root_positions)
 
     # record the last position of the drone
     root_pos_last = root_positions.clone()

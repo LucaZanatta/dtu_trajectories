@@ -47,7 +47,7 @@ class Crazyflie(VecTask):
         self.cfg = cfg
         self.max_episode_length = self.cfg["env"]["maxEpisodeLength"]
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
-        num_observations = 13
+        num_observations = 19
         num_actions = 4
         bodies_per_env = 1
         
@@ -77,7 +77,7 @@ class Crazyflie(VecTask):
         # trajectory
         # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
         # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
-        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros.csv')
+        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros_z.csv')
         self.trajectory_len = torch.tensor(len(self.trajectory), dtype=torch.int32, device=self.device)
         self.tra_index = torch.arange(0, self.trajectory_len, 1, dtype=torch.int32, device=self.device)
         self.tra_index = self.tra_index.unsqueeze(0).expand(self.num_envs, -1)
@@ -284,67 +284,10 @@ class Crazyflie(VecTask):
         # self.friction = torch.clamp(self.friction, -0.01, 0.01)
         # roll, pitch, yaw = get_euler_xyz(self.root_quats)
         self.forces[:, 0, 2] = common_thrust
-        # print("roll: ", roll)
-        # print("pitch: ", pitch)
-        # print("yaw: ", yaw)
-
-        # force_x = common_thrust * (torch.sin(yaw) * torch.sin(pitch) + torch.cos(yaw) * torch.sin(roll) * torch.cos(pitch))
-        # force_y = common_thrust * (torch.sin(yaw) * torch.sin(roll) * torch.cos(pitch) - torch.cos(yaw) * torch.sin(pitch))
-        # force_z = common_thrust * torch.cos(pitch) * torch.cos(roll)
-
-        # self.forces[:, 0, 0] = force_x
-        # self.forces[:, 0, 1] = force_y
-        # self.forces[:, 0, 2] = force_z
-        # print("self.root_linvels: ", self.root_linvels)
-        # print("self.controller.body_drone_linvels: ", self.controller.body_drone_linvels)
-        # print("sellf.friction: ", self.friction)
-        # print("self.forces: ", self.forces)
-        # print("total_torque: ", total_torque)
-        
-        # Log the value of self.root_linvels in a CSV file
-        # velocity = torch.norm(self.root_linvels, dim=-1)
-        # with open('log/root_linvels_log.csv', 'a', newline='') as csvfile:
-        #     writer = csv.writer(csvfile)
-        #     for i in range(self.num_envs):
-        #         writer.writerow([self.root_linvels[i, 0].item(), self.root_linvels[i, 1].item(), self.root_linvels[i, 2].item()])
-        
-        # # Log the value of self.controller.body_drone_linvels in a CSV file
-        # with open('log/body_drone_linvels_log.csv', 'a', newline='') as csvfile:
-        #     writer = csv.writer(csvfile)
-        #     for i in range(self.num_envs):
-        #         writer.writerow([self.controller.body_drone_linvels[i, 0].item(), self.controller.body_drone_linvels[i, 1].item(), self.controller.body_drone_linvels[i, 2].item()])
-        
-        # # Log the value of self.friction in a CSV file
-        # with open('log/friction_log.csv', 'a', newline='') as csvfile:
-        #     writer = csv.writer(csvfile)
-        #     for i in range(self.num_envs):
-        #         writer.writerow([self.friction[i, 0, 0].item(), self.friction[i, 0, 1].item(), self.friction[i, 0, 2].item()])
-            
-        # # Log the value of self.forces in a CSV file
-        # with open('log/forces_log.csv', 'a', newline='') as csvfile:
-        #     writer = csv.writer(csvfile)
-        #     for i in range(self.num_envs):
-        #         writer.writerow([self.forces[i, 0, 0].item(), self.forces[i, 0, 1].item(), self.forces[i, 0, 2].item()])
-                
-        # # Log the value of self.forces in a CSV file
-        # with open('log/torque_log.csv', 'a', newline='') as csvfile:
-        #     writer = csv.writer(csvfile)
-        #     for i in range(self.num_envs):
-        #         writer.writerow([total_torque[i, 0].item(), total_torque[i, 1].item(), total_torque[i, 2].item()])
-            
-        # # Log the value of velocity in a CSV file
-        # with open('log/velocity_log.csv', 'a', newline='') as csvfile:
-        #     writer = csv.writer(csvfile)
-        #     for i in range(self.num_envs):
-        #         writer.writerow([velocity[i].item()])
-
-        
 
         # clear actions for reset envs
         self.forces[reset_env_ids] = 0.0
         total_torque[reset_env_ids] = 0.0
-
-        # self.gym.apply_rigid_body_force_tensors(self.sim, gymtorch.unwrap_tensor(self.forces), None, gymapi.LOCAL_SPACE)
 
         # Apply forces and torques to the drone
         self.gym.apply_rigid_body_force_tensors(self.sim, 
@@ -380,15 +323,32 @@ class Crazyflie(VecTask):
 
         
     def compute_observations(self):
-        target_x = 0.0
-        target_y = 0.0
-        target_z = 1.0
+        
+        target_x = self.target_pos[:,0]
+        target_y = self.target_pos[:,1]
+        target_z = self.target_pos[:,2]
         self.obs_buf[..., 0] = (target_x - self.root_positions[..., 0]) / 3
         self.obs_buf[..., 1] = (target_y - self.root_positions[..., 1]) / 3
         self.obs_buf[..., 2] = (target_z - self.root_positions[..., 2]) / 3
+        
         self.obs_buf[..., 3:7] = self.root_quats
         self.obs_buf[..., 7:10] = self.root_linvels / 2
         self.obs_buf[..., 10:13] = self.root_angvels / math.pi
+        
+        target_x_next = self.target_pos_next[:,0]
+        target_y_next = self.target_pos_next[:,1]
+        target_z_next = self.target_pos_next[:,2]
+        self.obs_buf[..., 13] = (target_x_next - self.root_positions[..., 0]) / 3
+        self.obs_buf[..., 14] = (target_y_next - self.root_positions[..., 1]) / 3
+        self.obs_buf[..., 15] = (target_z_next - self.root_positions[..., 2]) / 3
+        
+        target_x_next_next = self.target_pos_next_next[:,0]
+        target_y_next_next = self.target_pos_next_next[:,1]
+        target_z_next_next = self.target_pos_next_next[:,2]
+        self.obs_buf[..., 16] = (target_x_next_next - self.root_positions[..., 0]) / 3
+        self.obs_buf[..., 17] = (target_y_next_next - self.root_positions[..., 1]) / 3
+        self.obs_buf[..., 18] = (target_z_next_next - self.root_positions[..., 2]) / 3
+        
         return self.obs_buf
     
     def compute_reward(self):
@@ -439,13 +399,13 @@ def compute_crazyflie_reward(tra_index, trajectory, trajectory_len ,target_index
     ###################
     # calculate error #
     ###################
-    line_vector = target_pos_last - target_pos
-    line_direction = line_vector / torch.norm(line_vector, dim=-1, keepdim=True)
-    root_to_line_vector = root_positions - target_pos
-    perpendicular_distance = torch.norm(torch.cross(root_to_line_vector, line_direction), dim=-1)
+    # line_vector = target_pos_last - target_pos
+    # line_direction = line_vector / torch.norm(line_vector, dim=-1, keepdim=True)
+    # root_to_line_vector = root_positions - target_pos
+    # perpendicular_distance = torch.norm(torch.cross(root_to_line_vector, line_direction), dim=-1)
     
-    perpendicular_distance = perpendicular_distance.unsqueeze(1)
-    write_to_csv(perpendicular_distance, "perpendicular_distance")
+    # perpendicular_distance = perpendicular_distance.unsqueeze(1)
+    # write_to_csv(perpendicular_distance, "perpendicular_distance")
     
     
     

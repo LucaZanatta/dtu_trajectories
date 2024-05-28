@@ -5,8 +5,8 @@ import numpy as np
 
 def generate_ouroboros_z_points(num_points):
     t = np.linspace(0, 2*np.pi, num_points)
-    x = np.sin(t)*1.5
-    y = np.cos(t) * np.sin(t)
+    x = np.sin(t)*2
+    y = np.cos(t) * np.sin(t)*1.5
     z = np.sin(t) * np.sin(t) * 0.7
     z = z + 1
     return x, y, z
@@ -49,7 +49,7 @@ def plot_3d_trajectory(x, y, z):
     plt.show()
 
 
-num_points = 100
+num_points = 40
 x, y, z = generate_ouroboros_z_points(num_points)
 
 # plot_2d_trajectory(x, y)

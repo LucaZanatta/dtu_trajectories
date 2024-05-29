@@ -5,9 +5,9 @@ from mpl_toolkits.mplot3d import Axes3D
 
 def generate_spiral_v_points(num_points):
     t = np.linspace(0, 6*np.pi, num_points)
-    radius = 1
+    radius = 1.5
     pitch = 0.5
-    x = radius * np.cos(t)
+    x = radius * np.cos(t) - 0.5
     y = radius * np.sin(t)
     z = pitch * t / (2*np.pi) + 1
     x = x - 1

@@ -5,8 +5,8 @@ import numpy as np
 
 def generate_tornado_points(num_points):
     theta = np.linspace(-4*np.pi, 4*np.pi, num_points)
-    r = np.linspace(0, 3 , num_points)
-    z = r
+    r = np.linspace(0, 2, num_points)
+    z = r+1
     x = r*np.cos(theta)
     y = r*np.sin(theta)
     
@@ -51,7 +51,7 @@ def plot_3d_trajectory(x, y, z):
     plt.show()
 
 
-num_points = 100
+num_points = 50
 x, y, z = generate_tornado_points(num_points)
 
 plot_2d_trajectory(x, y)

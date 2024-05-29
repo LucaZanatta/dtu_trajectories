@@ -85,12 +85,12 @@ models["value"] = models["policy"]  # same instance: shared model
 # configure and instantiate the agent (visit its documentation to see all the options)
 # https://skrl.readthedocs.io/en/latest/api/agents/ppo.html#configuration-and-hyperparameters
 cfg = PPO_DEFAULT_CONFIG.copy()
-cfg["rollouts"] = 32  # memory_size must be >= 16
+cfg["rollouts"] = 16  # memory_size must be >= 16
 cfg["learning_epochs"] = 8 # 8 5
 cfg["mini_batches"] = 8  # 8 * 8192 / 16384 = 4 # 8
 cfg["discount_factor"] = 0.975 # 0.98
 cfg["lambda"] = 0.95
-cfg["learning_rate"] = 5e-4 # 1e-3
+cfg["learning_rate"] = 1e-3 # 1e-3
 cfg["learning_rate_scheduler"] = KLAdaptiveRL
 cfg["learning_rate_scheduler_kwargs"] = {"kl_threshold": 0.016}
 cfg["random_timesteps"] = 0
@@ -110,7 +110,7 @@ cfg["value_preprocessor_kwargs"] = {"size": 1, "device": device}
 # logging to TensorBoard and write checkpoints (in timesteps)
 cfg["experiment"]["write_interval"] = 100
 cfg["experiment"]["checkpoint_interval"] = 1000
-cfg["experiment"]["directory"] = "isaacgymenvs/runs/crazyflie_ppo"
+cfg["experiment"]["directory"] = "isaacgymenvs/runs"
 cfg["experiment"]["experiment_name"] = "crazyflie_ppo"
 cfg["experiment"]["wandb"] = True
 # cfg["experiment"]["wandb_kwargs"] = {}
@@ -139,7 +139,7 @@ trainer = SequentialTrainer(cfg=cfg_trainer, env=env, agents=agent)
 # # download the trained agent's checkpoint from Hugging Face Hub and load it
 # # path = download_model_from_huggingface("skrl/IsaacGymEnvs-Quadcopter-PPO", filename="agent.pt")
 
-path = "isaacgymenvs/runs/crazyflie_ppo/crazyflie_ppo/checkpoints/agent_80000.pt"
-agent.load(path)
-trainer.eval()
-# trainer.train()
+# path = "isaacgymenvs/runs/crazyflie_ppo/checkpoints/best_agent.pt"
+# agent.load(path)
+# trainer.eval()
+trainer.train()

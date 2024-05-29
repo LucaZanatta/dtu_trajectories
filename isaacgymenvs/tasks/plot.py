@@ -65,21 +65,18 @@ import matplotlib.pyplot as plt
 # plt.legend()
 # plt.show()
 
-# # root_linvels_log
-# root_linvels_log = pd.read_csv('log/root_linvels_log.csv')
-# root_linvels_x = root_linvels_log.index
-# root_linvels_y_1 = root_linvels_log.iloc[:, 0]
-# root_linvels_y_2 = root_linvels_log.iloc[:, 1]
-# root_linvels_y_3 = root_linvels_log.iloc[:, 2]
 
-# plt.plot(root_linvels_x, root_linvels_y_1, label='root_linvels on x', color='r')
-# plt.plot(root_linvels_x, root_linvels_y_2, label='root_linvels on y', color='g')
-# plt.plot(root_linvels_x, root_linvels_y_3, label='root_linvels on z', color='b')
-# plt.xlabel('Steps')
-# plt.ylabel('root_linvels')
-# plt.title('root_linvels on x y z axis over Steps')
-# plt.legend()
-# plt.show()
+velocity = pd.read_csv('log/velocity.csv')
+velocity_x = velocity.index
+velocity_y = velocity.iloc[:, 0]
+
+
+plt.plot(velocity_x, velocity_y, label='velocity', color='r')
+plt.xlabel('Steps')
+plt.ylabel('velocity')
+plt.title('velocity over Steps')
+plt.legend()
+plt.show()
 
 # reward_log = pd.read_csv('log/reward.csv')
 # reward_index = reward_log.index
@@ -121,19 +118,19 @@ import matplotlib.pyplot as plt
 # plt.show()
 
 
-# Read the data from perpendicular_distance.csv
-perpendicular_distance_log = pd.read_csv('log/perpendicular_distance.csv')
-# Extract the x and y values from the data
-perpendicular_distance_x = perpendicular_distance_log.index
-perpendicular_distance_y = perpendicular_distance_log.iloc[:, 0]
-# Plot the line chart
-plt.plot(perpendicular_distance_x, perpendicular_distance_y, color='b')
-plt.xlabel('Steps', fontsize=16)
-plt.ylabel('Error', fontsize=16)
-plt.title('Error over Steps (measured in meters)', fontsize=18)
-plt.xticks(fontsize=14)
-plt.yticks(fontsize=14)
-plt.show()
-# Calculate the mean of the perpendicular distance
-mean_perpendicular_distance = perpendicular_distance_y.mean()
-print("Mean Perpendicular Distance:", mean_perpendicular_distance)
+# # Read the data from perpendicular_distance.csv
+# perpendicular_distance_log = pd.read_csv('log/perpendicular_distance.csv')
+# # Extract the x and y values from the data
+# perpendicular_distance_x = perpendicular_distance_log.index
+# perpendicular_distance_y = perpendicular_distance_log.iloc[:, 0]
+# # Plot the line chart
+# plt.plot(perpendicular_distance_x, perpendicular_distance_y, color='b')
+# plt.xlabel('Steps', fontsize=16)
+# plt.ylabel('Error', fontsize=16)
+# plt.title('Error over Steps (measured in meters)', fontsize=18)
+# plt.xticks(fontsize=14)
+# plt.yticks(fontsize=14)
+# plt.show()
+# # Calculate the mean of the perpendicular distance
+# mean_perpendicular_distance = perpendicular_distance_y.mean()
+# print("Mean Perpendicular Distance:", mean_perpendicular_distance)

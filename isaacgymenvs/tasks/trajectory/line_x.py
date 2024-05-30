@@ -5,8 +5,8 @@ import numpy as np
 
 def generate_line_x_points(num_points):
     t = np.linspace(0, 2, num_points)
-    x = t
-    y = np.zeros_like(t)
+    x = np.zeros_like(t)
+    y = t
     z = np.ones_like(t)
     
     return x, y, z

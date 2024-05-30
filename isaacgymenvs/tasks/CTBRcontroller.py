@@ -34,9 +34,9 @@ class CTRBctrl():
 
         # Proportional gain matrix
         self.P = torch.zeros((self.num_envs, 3, 3), device=self.device, dtype=torch.float32)
-        self.P[:,0,0] = 50
-        self.P[:,1,1] = 50
-        self.P[:,2,2] = 50
+        self.P[:,0,0] = 5
+        self.P[:,1,1] = 5
+        self.P[:,2,2] = 5
 
         # Inertia matrix
         self.J = torch.zeros((self.num_envs, 3, 3), device=self.device, dtype=torch.float32)
@@ -63,6 +63,7 @@ class CTRBctrl():
         ## Proportional term
         prop_temp = torch.einsum('nhj,nj-> nh', self.P, self.error)
         prop = torch.einsum('nhj,nj-> nh', self.J, prop_temp)
+        
 
         ## Feedback linearization term
         fb_lin = torch.zeros_like(prop)
@@ -81,8 +82,9 @@ class CTRBctrl():
         # Now compute rotor force solving the linear sistem of eq rotor_forces[num_envs, 4]
         # Solve system of lin equations: AX = B, obtain 4 scalars that are the value of the thrusts of each motor
         # Thrust: vector perpendicular to the drone plane applied at the center of the motor
+        
         self.thrust[:] = torch.linalg.solve(self.A, self.B)
-
+        
         # PX4: Saturated mixing, Airmode Enabled
         # Check if some motors saturates and rescale to avoid this condition
         thrust_offset_lower = torch.min(self.thrust, dim=-1)[0]
@@ -104,7 +106,8 @@ class CTRBctrl():
 
         # Remap individual rotor thrusts to the resulting linear force and moment to be compatible with Isaac
         self.B[:] = torch.linalg.solve(self.inv_A, self.thrust)
-
+        
+        
         total_torque = self.B[:,0:3].clone()
         common_thrust = self.B[:,3].clone()
         

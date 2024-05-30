@@ -38,8 +38,7 @@ from CTBRcontroller import CTRBctrl
 import torch
 import pandas as pd
 import csv
-from isaacgymenvs.utils.torch_jit_utils import copysign, get_euler_xyz
-# from skrl.utils import isaacgym_utils
+import wandb
 
 class Crazyflie(VecTask):
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
@@ -74,10 +73,11 @@ class Crazyflie(VecTask):
         # CTBR added
         self.controller = CTRBctrl(self.num_envs, device=self.device)
         self.friction = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device)
+        
         # trajectory
-        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
+        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
         # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
-        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros.csv')
 
         self.trajectory_len = torch.tensor(len(self.trajectory), dtype=torch.int32, device=self.device)
         self.tra_index = torch.arange(0, self.trajectory_len, 1, dtype=torch.int32, device=self.device)
@@ -251,6 +251,9 @@ class Crazyflie(VecTask):
         
     def pre_physics_step(self, _actions):
         
+        # reset trajectory
+        
+        
         # resets
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_env_ids) > 0:
@@ -277,13 +280,15 @@ class Crazyflie(VecTask):
         #                                                 self.root_quats, 
         #                                                 self.root_linvels, 
         #                                                 self.root_angvels)
+        # wandb.log({"total_torque_0": total_torque[0,0], "total_torque_1": total_torque[0,1],"total_torque_2": total_torque[0,2], "common_thrust": common_thrust[0]})
         # # self.forces[:, 0, 2] = common_thrust
         # print("common_thrust: ", common_thrust)
         # print("total_torque: ", total_torque)
         # self.friction[:, 0, :] = 0.002*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2
-        # self.friction[:, 0, :] = -0.005*torch.sign(self.root_linvels)*self.root_linvels**2
-        # self.friction = torch.clamp(self.friction, -0.01, 0.01)
-        # roll, pitch, yaw = get_euler_xyz(self.root_quats)
+        # self.friction[:, 0, :] = -0.5*torch.sign(self.root_linvels)*self.root_linvels**2
+        # wandb.log({"friction_0": self.friction[0,0,0], "friction_1": self.friction[0,0,1],"friction_2": self.friction[0,0,2]})
+        # self.forces = self.friction.clone()
+        # self.forces[:, 0, 2] += common_thrust
         self.forces[:, 0, 2] = common_thrust
 
         # clear actions for reset envs
@@ -466,7 +471,7 @@ def compute_crazyflie_reward(tra_index, trajectory, trajectory_len ,target_index
     #########################
     # total reward function #
     #########################
-    reward = pos_reward_0 + pos_reward_1 + pos_reward_2 + access + velocity_reward*(pos_reward_0 + pos_reward_1 + pos_reward_2 + access) + up_reward + spinnage_reward# fine
+    reward = pos_reward_0 + pos_reward_1 + pos_reward_2 + access + velocity_reward*(pos_reward_0 + pos_reward_1 + pos_reward_2) + up_reward + spinnage_reward# fine
 
 
     # record the last position of the drone

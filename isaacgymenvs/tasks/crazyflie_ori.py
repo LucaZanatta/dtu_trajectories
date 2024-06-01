@@ -37,18 +37,17 @@ from .base.vec_task import VecTask
 from CTBRcontroller import CTRBctrl
 import torch
 import pandas as pd
-
+import csv
+import wandb
 
 class Crazyflie(VecTask):
     def __init__(self, cfg, rl_device, sim_device, graphics_device_id, headless, virtual_screen_capture, force_render):
-        self.cfg = cfg
         
+        self.cfg = cfg
         self.max_episode_length = self.cfg["env"]["maxEpisodeLength"]
         self.debug_viz = self.cfg["env"]["enableDebugVis"]
-        
-        num_observations = 18
+        num_observations = 19
         num_actions = 4
-        
         bodies_per_env = 1
         
         self.cfg["env"]["numObservations"] = num_observations
@@ -58,56 +57,82 @@ class Crazyflie(VecTask):
                 
         self.root_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
         vec_root_tensor = gymtorch.wrap_tensor(self.root_tensor).view(self.num_envs, 13)
-        
         self.root_states = vec_root_tensor
         self.root_positions = self.root_states[:, 0:3]
         self.root_quats = self.root_states[:, 3:7]
         self.root_linvels = self.root_states[:, 7:10]
         self.root_angvels = self.root_states[:, 10:13]
-
-        
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.initial_root_states = self.root_states.clone()
-        
-        # set thrust limits
-        max_thrust = 2
-        self.thrust_lower_limits = torch.zeros(4, device=self.device, dtype=torch.float32)
-        self.thrust_upper_limits = max_thrust * torch.ones(4, device=self.device, dtype=torch.float32)
 
         # control tensors
-        self.thrusts = torch.zeros((self.num_envs, 4), dtype=torch.float32, device=self.device, requires_grad=False)
         self.forces = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device, requires_grad=False)
 
         self.all_actor_indices = torch.arange(self.num_envs, dtype=torch.int32, device=self.device)
         
         # CTBR added
         self.controller = CTRBctrl(self.num_envs, device=self.device)
-        self.friction = torch.zeros((self.num_envs, bodies_per_env, 3), device=self.device, dtype=torch.float32)
-
+        self.friction = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device)
+        
         # trajectory
-        # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
-        # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xy.csv')
-        # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xyz.csv')
-        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
-        # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle.csv')
-        # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/d_circle_plus.csv')
-        # trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/helix.csv')
+        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros.csv')
+
+        self.trajectory_len = torch.tensor(len(self.trajectory), dtype=torch.int32, device=self.device)
+        self.tra_index = torch.arange(0, self.trajectory_len, 1, dtype=torch.int32, device=self.device)
+        self.tra_index = self.tra_index.unsqueeze(0).expand(self.num_envs, -1)
         
-        self.x = self.trajectory.iloc[:, 0]
-        self.y = self.trajectory.iloc[:, 1]
-        self.z = self.trajectory.iloc[:, 2]
-        
+        coordinates = self.trajectory[['X', 'Y', 'Z']].values
+        self.trajectory = torch.tensor(coordinates, dtype=torch.float32, device=self.device)
+        self.x = self.trajectory[:, 0]
+        self.y = self.trajectory[:, 1]
+        self.z = self.trajectory[:, 2]
         self.len_of_traj = len(self.trajectory)
                 
         # taret index for envs
-        self.target_index = torch.zeros((self.num_envs, 1), device=self.device, dtype=torch.int32)
-        self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
-        self.target_root_positions[:,2] = 1
-        self.reset_target = torch.ones(self.num_envs, device=self.device, dtype=torch.long)
+        # initial position of target is [1] point in the trajectory
+        # initial position of drone  is [0] point in the trajectory
+        # so here I set, when starting, last targt is [0], current target is [1], next target is [2], next next target is [3]
         
+        # last target
+        self.target_index_last = torch.zeros(self.num_envs, dtype=torch.int32, device=self.device)
+        self.target_pos_last = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
+        self.target_pos_last[:,0] = self.x[0]
+        self.target_pos_last[:,1] = self.y[0]
+        self.target_pos_last[:,2] = self.z[0]
+        
+        # current target
+        self.target_index = torch.ones(self.num_envs, dtype=torch.int32, device=self.device)
+        self.target_pos = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
+        self.target_pos[:,0] = self.x[1]
+        self.target_pos[:,1] = self.y[1]
+        self.target_pos[:,2] = self.z[1]
+        
+        # next target
+        self.target_index_next = 2*torch.ones(self.num_envs, dtype=torch.int32, device=self.device)
+        self.target_pos_next = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
+        self.target_pos_next[:,0] = self.x[2]
+        self.target_pos_next[:,1] = self.y[2]
+        self.target_pos_next[:,2] = self.z[2]
+        
+        # next next target
+        self.target_index_next_next = 3*torch.ones(self.num_envs, dtype=torch.int32, device=self.device)
+        self.target_pos_next_next = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
+        self.target_pos_next_next[:,0] = self.x[3]
+        self.target_pos_next_next[:,1] = self.y[3]
+        self.target_pos_next_next[:,2] = self.z[3]
+        
+        # record the last position of the drone, to chek if it is moving towards the target
+        self.root_pos_last = torch.zeros((self.num_envs, 3), dtype=torch.float32, device=self.device)
+        
+        # reset target buffers
+        self.reset_target_buf = torch.ones(self.num_envs, dtype=torch.long, device=self.device)
+        
+        # set camera position
         if self.viewer:
-            cam_pos = gymapi.Vec3(1.0, 1.0, 1.8)
-            cam_target = gymapi.Vec3(2.2, 2.0, 1.0)
+            cam_pos = gymapi.Vec3(-1, 0, 3)
+            cam_target = gymapi.Vec3(1, 0, 1)
             self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
 
             # need rigid body states for visualizing thrusts
@@ -135,6 +160,9 @@ class Crazyflie(VecTask):
     
         
     def _create_envs(self, num_envs, spacing, num_per_row):
+        # create a web viewer instance
+        # self.web_viewer = isaacgym_utils.WebViewer()
+        
         lower = gymapi.Vec3(-spacing, -spacing, 0)
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
@@ -151,15 +179,16 @@ class Crazyflie(VecTask):
         default_pose = gymapi.Transform()
         default_pose.p.x = 0
         default_pose.p.y = 0
-        default_pose.p.z = 1 # set initial height to 0.5
+        default_pose.p.z = 1 # set initial height to 1
 
         self.envs = []
+        
         for i in range(self.num_envs):
             # create env instance
             env = self.gym.create_env(self.sim, lower, upper, num_per_row)
-            actor_handle = self.gym.create_actor(env, asset, default_pose, "crazyflie", i, 1, 1)            
+            actor_handle = self.gym.create_actor(env, asset, default_pose, "crazyflie", i, 1, 1)          
             self.envs.append(env)
-        
+            
         if self.debug_viz:
             # need env offsets for the rotors
             self.rotor_env_offsets = torch.zeros((self.num_envs, 4, 3), device=self.device)
@@ -170,8 +199,7 @@ class Crazyflie(VecTask):
                 self.rotor_env_offsets[i, ..., 2] = env_origin.z
         
     def reset_idx(self, env_ids):
-        
-        # print("env_ids: ", env_ids)
+
         num_resets = len(env_ids)
         actor_indices = self.all_actor_indices[env_ids].flatten()
         
@@ -183,59 +211,97 @@ class Crazyflie(VecTask):
 
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
-        self.target_index[env_ids] = -1
+        
+        # reset target index, index will be +1 in self.set_targets
+        self.target_index_last[env_ids] = -1
+        self.target_index[env_ids] = 0
+        self.target_index_next[env_ids] = 1
+        self.target_index_next_next[env_ids] = 2
+        
         self.set_targets(env_ids)
         
     def set_targets(self,env_ids):
+        # env_ids is the indices of the envs that need to be reset for target
+
+        self.target_index_last[env_ids] += 1
+        self.target_index_last[self.target_index_last > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_pos_last[env_ids,0] = self.x[self.target_index_last[env_ids]]
+        self.target_pos_last[env_ids,1] = self.y[self.target_index_last[env_ids]]
+        self.target_pos_last[env_ids,2] = self.z[self.target_index_last[env_ids]]
         
         self.target_index[env_ids] += 1
-        idx = self.target_index.cpu().numpy()
-
-        for i in env_ids:
-            if self.target_index[i] >= (self.len_of_traj-1):
-                self.target_root_positions[i,0] = torch.from_numpy(self.x[self.len_of_traj-1].values).float().to(self.target_root_positions.device)
-                self.target_root_positions[i,1] = torch.from_numpy(self.y[self.len_of_traj-1].values).float().to(self.target_root_positions.device)
-                self.target_root_positions[i,2] = torch.from_numpy(self.z[self.len_of_traj-1].values).float().to(self.target_root_positions.device)
-
-            else:
-                self.target_root_positions[i,0] = torch.from_numpy(self.x[idx[i]].values).float().to(self.target_root_positions.device)
-                self.target_root_positions[i,1] = torch.from_numpy(self.y[idx[i]].values).float().to(self.target_root_positions.device)
-                self.target_root_positions[i,2] = torch.from_numpy(self.z[idx[i]].values).float().to(self.target_root_positions.device)
-
-        self.reset_target[env_ids] = 0
+        self.target_index[self.target_index > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_pos[env_ids,0] = self.x[self.target_index[env_ids]]
+        self.target_pos[env_ids,1] = self.y[self.target_index[env_ids]]
+        self.target_pos[env_ids,2] = self.z[self.target_index[env_ids]]
+        
+        self.target_index_next[env_ids] += 1
+        self.target_index_next[self.target_index_next > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_pos_next[env_ids,0] = self.x[self.target_index_next[env_ids]]
+        self.target_pos_next[env_ids,1] = self.y[self.target_index_next[env_ids]]
+        self.target_pos_next[env_ids,2] = self.z[self.target_index_next[env_ids]]
+        
+        self.target_index_next_next[env_ids] += 1
+        self.target_index_next_next[self.target_index_next_next > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_pos_next_next[env_ids,0] = self.x[self.target_index_next_next[env_ids]]
+        self.target_pos_next_next[env_ids,1] = self.y[self.target_index_next_next[env_ids]]
+        self.target_pos_next_next[env_ids,2] = self.z[self.target_index_next_next[env_ids]]
+        
+        self.reset_target_buf[env_ids] = 0
         
     def pre_physics_step(self, _actions):
-
+        
+        # reset trajectory
+        
+        
         # resets
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_env_ids) > 0:
-            self.reset_idx(reset_env_ids)  
-            
+            self.reset_idx(reset_env_ids)
+    
         # set targets
-        reset_env_ids_target = self.reset_target.nonzero(as_tuple=False).squeeze(-1)
+        reset_env_ids_target = self.reset_target_buf.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_env_ids_target) > 0:
             self.set_targets(reset_env_ids_target)
-        
+            
         actions = _actions.to(self.device)
-        total_torque, common_thrust = self.controller.update(actions, 
-                                                        self.root_quats, 
-                                                        self.root_linvels, 
-                                                        self.root_angvels)
-        self.friction[:, 0, :] = -0.02*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2       
-        self.forces[:,0,2] = common_thrust
-        self.forces[:,0,:] += self.friction[:,0,:]
+
+        ######
+        # NN #
+        ######
+        total_torque = torch.clamp(actions[:, 0:3], -0.005, 0.005)
+        common_thrust = torch.clamp(actions[:, 3], 0, 2)
+
+
+        ###############
+        # NN and CTBR #
+        ###############
+        # total_torque, common_thrust = self.controller.update(actions, 
+        #                                                 self.root_quats, 
+        #                                                 self.root_linvels, 
+        #                                                 self.root_angvels)
+        # wandb.log({"total_torque_0": total_torque[0,0], "total_torque_1": total_torque[0,1],"total_torque_2": total_torque[0,2], "common_thrust": common_thrust[0]})
+        # # self.forces[:, 0, 2] = common_thrust
+        # print("common_thrust: ", common_thrust)
+        # print("total_torque: ", total_torque)
+        # self.friction[:, 0, :] = 0.002*torch.sign(self.controller.body_drone_linvels)*self.controller.body_drone_linvels**2
+        # self.friction[:, 0, :] = -0.5*torch.sign(self.root_linvels)*self.root_linvels**2
+        # wandb.log({"friction_0": self.friction[0,0,0], "friction_1": self.friction[0,0,1],"friction_2": self.friction[0,0,2]})
+        # self.forces = self.friction.clone()
+        # self.forces[:, 0, 2] += common_thrust
+        self.forces[:, 0, 2] = common_thrust
 
         # clear actions for reset envs
         self.forces[reset_env_ids] = 0.0
         total_torque[reset_env_ids] = 0.0
-        
+
         # Apply forces and torques to the drone
-        self.gym.apply_rigid_body_force_tensors( self.sim, 
+        self.gym.apply_rigid_body_force_tensors(self.sim, 
                                             gymtorch.unwrap_tensor(self.forces), 
                                             gymtorch.unwrap_tensor(total_torque),
                                             gymapi.LOCAL_SPACE)
+  
         
-
     def post_physics_step(self):
         
         
@@ -263,76 +329,166 @@ class Crazyflie(VecTask):
 
         
     def compute_observations(self):
-        target_x = 0.0
-        target_y = 0.0
-        target_z = 1.0
+        
+        target_x = self.target_pos[:,0]
+        target_y = self.target_pos[:,1]
+        target_z = self.target_pos[:,2]
         self.obs_buf[..., 0] = (target_x - self.root_positions[..., 0]) / 3
         self.obs_buf[..., 1] = (target_y - self.root_positions[..., 1]) / 3
         self.obs_buf[..., 2] = (target_z - self.root_positions[..., 2]) / 3
+        
         self.obs_buf[..., 3:7] = self.root_quats
         self.obs_buf[..., 7:10] = self.root_linvels / 2
         self.obs_buf[..., 10:13] = self.root_angvels / math.pi
+        
+        target_x_next = self.target_pos_next[:,0]
+        target_y_next = self.target_pos_next[:,1]
+        target_z_next = self.target_pos_next[:,2]
+        self.obs_buf[..., 13] = (target_x_next - self.root_positions[..., 0]) / 3
+        self.obs_buf[..., 14] = (target_y_next - self.root_positions[..., 1]) / 3
+        self.obs_buf[..., 15] = (target_z_next - self.root_positions[..., 2]) / 3
+        
+        target_x_next_next = self.target_pos_next_next[:,0]
+        target_y_next_next = self.target_pos_next_next[:,1]
+        target_z_next_next = self.target_pos_next_next[:,2]
+        self.obs_buf[..., 16] = (target_x_next_next - self.root_positions[..., 0]) / 3
+        self.obs_buf[..., 17] = (target_y_next_next - self.root_positions[..., 1]) / 3
+        self.obs_buf[..., 18] = (target_z_next_next - self.root_positions[..., 2]) / 3
+        
         return self.obs_buf
     
     def compute_reward(self):
-        self.rew_buf[:], self.reset_buf[:], self.reset_target[:] = compute_crazyflie_reward(
+        self.rew_buf[:], self.reset_buf[:], self.reset_target_buf[:], self.root_pos_last[:] = compute_crazyflie_reward(
+            self.tra_index,
+            self.trajectory,
+            self.trajectory_len, 
+            self.target_index,
+            self.root_pos_last,
             self.root_positions,
-            self.target_root_positions,
+            self.target_pos_last,
+            self.target_pos,
+            self.target_pos_next,
+            self.target_pos_next_next,
             self.root_quats,
             self.root_linvels,
             self.root_angvels,
             self.reset_buf, self.progress_buf, self.max_episode_length,
-            self.reset_target,
+            self.reset_target_buf,
         )
         
-  
+def write_to_csv(data, filename):
+    filepath = 'log/'+filename+'.csv'
+    if not os.path.exists(os.path.dirname(filepath)):
+        os.makedirs(os.path.dirname(filepath))
+    with open('log/'+filename+'.csv', 'a', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        for i in range(len(data)):
+            writer.writerow([data[i].item()])
+    
         
 #####################################################################
 ###=========================jit functions=========================###
  
-@torch.jit.script
-def compute_crazyflie_reward(root_positions, target_root_positions, root_quats, root_linvels, root_angvels, reset_buf, progress_buf, max_episode_length,reset_target):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor) -> Tuple[Tensor, Tensor, Tensor]
-
-    # distance to target
-    # target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
+# @torch.jit.script
+def compute_crazyflie_reward(tra_index, trajectory, trajectory_len ,target_index, root_pos_last,root_positions, target_pos_last, target_pos, target_pos_next, target_pos_next_next ,root_quats, root_linvels, root_angvels, reset_buf, progress_buf, max_episode_length,reset_target_buf):
+    # type: (Tensor, Tensor, Tensor,Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor]
     
-    target_dist = torch.sqrt(root_positions[..., 0] * root_positions[..., 0] +
-                             root_positions[..., 1] * root_positions[..., 1] +
-                             (2 - root_positions[..., 2]) * (2 - root_positions[..., 2]))    
+    ######################
+    # distance to target #
+    ######################
+    target_dist =  torch.sqrt(torch.square(target_pos - root_positions).sum(-1))
+    target_dist_next = torch.sqrt(torch.square(target_pos_next - root_positions).sum(-1))
+    target_dist_next_next = torch.sqrt(torch.square(target_pos_next_next - root_positions).sum(-1))
     
-    pos_reward = 1 / (1 + target_dist * target_dist)
+    
+    ###################
+    # calculate error #
+    ###################
+    # line_vector = target_pos_last - target_pos
+    # line_direction = line_vector / torch.norm(line_vector, dim=-1, keepdim=True)
+    # root_to_line_vector = root_positions - target_pos
+    # perpendicular_distance = torch.norm(torch.cross(root_to_line_vector, line_direction), dim=-1)
+    # perpendicular_distance = perpendicular_distance.unsqueeze(1)
+    # write_to_csv(perpendicular_distance, "perpendicular_distance")
 
-    # print("target_root_positions: ", target_root_positions)
-    # print("root_positions: ", root_positions)
-    # print("target_dist: ", target_dist)
-    # uprightness
+
+    ###################
+    # position reward #
+    ###################
+    # We have added the future 3 target coordinates as input to the neural network, so the following weights are not very important
+    w_1 = 1
+    w_2 = 1
+    w_3 = 1
+
+    pos_reward_0 = w_1/(1 + target_dist*10) + w_2/(1 + target_dist_next*10) + w_3/(1 + target_dist_next_next*10)
+    pos_reward_0 = pos_reward_0/6
+    
+    pos_reward_1 = pos_reward_0.clone()
+    pos_reward_1 = 0*pos_reward_0
+    last_target_dist = torch.sqrt(torch.square(target_pos - root_pos_last).sum(-1))
+    pos_reward_1[(last_target_dist-target_dist)>0] = pos_reward_0[(last_target_dist-target_dist)>0]
+    
+    pos_reward_2 = pos_reward_0.clone()
+    pos_reward_2 = 0*pos_reward_0
+    target_dist_xyz = torch.square(target_pos - root_positions)
+    target_dist_last_xyz = torch.square(target_pos - root_pos_last)
+    index_f = (target_dist_last_xyz - target_dist_xyz) >= 0
+    index_f = torch.all(index_f,dim=1)
+    indices = torch.nonzero(index_f).squeeze()
+    pos_reward_2[indices] = pos_reward_0[indices]
+    
+    
+    #################
+    # access reward #
+    #################
+    access = target_dist.clone()
+    access[target_dist>0.05] = 0
+    access[target_dist<=0.05] = 10
+    
+    
+    #############################################################
+    # velocity reward, if need loop trajectory, use this reward #
+    #############################################################
+    velocity = torch.norm(root_linvels, dim=-1)
+    velocity_reward = velocity.clone()
+    
+    
+    ######################
+    # uprightness reward #
+    ######################
     ups = quat_axis(root_quats, 2)
     tiltage = torch.abs(1 - ups[..., 2])
     up_reward = 1.0 / (1.0 + tiltage * tiltage)
-
-    # spinning
+    
+    
+    ###################
+    # spinning reward #
+    ###################
     spinnage = torch.abs(root_angvels[..., 2])
     spinnage_reward = 1.0 / (1.0 + spinnage * spinnage)
+    
+    
+    #########################
+    # total reward function #
+    #########################
+    reward = pos_reward_0 + pos_reward_1 + pos_reward_2 + access + velocity_reward*(pos_reward_0 + pos_reward_1 + pos_reward_2) + up_reward + spinnage_reward# fine
 
-    # combined reward
-    # uprigness and spinning only matter when close to the target
-    reward = pos_reward + pos_reward * (up_reward + spinnage_reward)
 
+    # record the last position of the drone
+    root_pos_last = root_positions.clone()
+    
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
-    die = torch.where(target_dist > 0.5, ones, die)
-    die = torch.where(root_positions[..., 2] < 0.5, ones, die)
+    die = torch.where(target_dist > 0.5, ones, die) # if drone gets too far from target, reset envs
+    die = torch.where(root_positions[..., 2] < 0.8, ones, die) # if drone gets too low, reset envs
     
     # resets due to episode length
-    reset = torch.where(progress_buf >= max_episode_length - 1, ones, die)
-    # reset = torch.where(target_index-(len_of_traj-1) >= 0, ones, die)
+    reset = torch.where(progress_buf >= max_episode_length - 1, ones, die) # if episode length is reached, reset envs
     
     # reset target
-    one = torch.ones_like(reset_target)
-    next = torch.zeros_like(reset_target)
-    next = torch.where(target_dist < 0.2, one, next)
+    one = torch.ones_like(reset_target_buf)
+    next = torch.zeros_like(reset_target_buf)
+    next = torch.where(target_dist < 0.05, one, next) # if drone gets pretty close to target, rest target
 
-    
-    return reward, reset, next
+    return reward, reset, next, root_pos_last

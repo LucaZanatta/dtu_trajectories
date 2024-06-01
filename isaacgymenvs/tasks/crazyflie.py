@@ -80,8 +80,6 @@ class Crazyflie(VecTask):
         # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros.csv')
 
         self.trajectory_len = torch.tensor(len(self.trajectory), dtype=torch.int32, device=self.device)
-        self.tra_index = torch.arange(0, self.trajectory_len, 1, dtype=torch.int32, device=self.device)
-        self.tra_index = self.tra_index.unsqueeze(0).expand(self.num_envs, -1)
         
         coordinates = self.trajectory[['X', 'Y', 'Z']].values
         self.trajectory = torch.tensor(coordinates, dtype=torch.float32, device=self.device)
@@ -359,7 +357,6 @@ class Crazyflie(VecTask):
     
     def compute_reward(self):
         self.rew_buf[:], self.reset_buf[:], self.reset_target_buf[:], self.root_pos_last[:] = compute_crazyflie_reward(
-            self.tra_index,
             self.trajectory,
             self.trajectory_len, 
             self.target_index,
@@ -390,8 +387,8 @@ def write_to_csv(data, filename):
 ###=========================jit functions=========================###
  
 # @torch.jit.script
-def compute_crazyflie_reward(tra_index, trajectory, trajectory_len ,target_index, root_pos_last,root_positions, target_pos_last, target_pos, target_pos_next, target_pos_next_next ,root_quats, root_linvels, root_angvels, reset_buf, progress_buf, max_episode_length,reset_target_buf):
-    # type: (Tensor, Tensor, Tensor,Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor]
+def compute_crazyflie_reward(trajectory, trajectory_len ,target_index, root_pos_last,root_positions, target_pos_last, target_pos, target_pos_next, target_pos_next_next ,root_quats, root_linvels, root_angvels, reset_buf, progress_buf, max_episode_length,reset_target_buf):
+    # type: (Tensor, Tensor,Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor) -> Tuple[Tensor, Tensor, Tensor, Tensor]
     
     ######################
     # distance to target #

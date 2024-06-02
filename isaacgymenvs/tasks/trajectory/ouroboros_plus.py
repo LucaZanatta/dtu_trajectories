@@ -4,10 +4,10 @@ import numpy as np
 
 
 def generate_ouroboros_plus_points(num_points):
-    t = np.linspace(0, 4*np.pi, num_points)
-    radius = 1
-    x = radius*np.cos(t) - radius
-    y = radius*np.sin(2*t)
+    t = np.linspace(0, 2*np.pi, num_points)
+    x = np.sin(t)
+    y = np.cos(t) * np.sin(t)*2.5
+    z = np.sin(t) * np.sin(t) * 0.7
     z = np.ones_like(t)
     return x, y, z
 

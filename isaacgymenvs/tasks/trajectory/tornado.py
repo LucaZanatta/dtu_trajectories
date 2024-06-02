@@ -51,7 +51,7 @@ def plot_3d_trajectory(x, y, z):
     plt.show()
 
 
-num_points = 50
+num_points = 100
 x, y, z = generate_tornado_points(num_points)
 
 plot_2d_trajectory(x, y)

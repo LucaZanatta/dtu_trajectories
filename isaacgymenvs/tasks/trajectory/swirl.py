@@ -5,7 +5,7 @@ import numpy as np
 
 def generate_swirl_points(num_points):
     theta = np.linspace(-4*np.pi, 4*np.pi, num_points)
-    r = np.linspace(0, 3 , num_points)
+    r = np.linspace(0, 2 , num_points)
     x = r*np.cos(theta)
     y = r*np.sin(theta)
     z = np.ones_like(theta)   

@@ -49,7 +49,7 @@ def plot_3d_trajectory(x, y, z):
     plt.show()
 
 
-num_points = 40
+num_points = 50
 x, y, z = generate_ouroboros_z_points(num_points)
 
 # plot_2d_trajectory(x, y)

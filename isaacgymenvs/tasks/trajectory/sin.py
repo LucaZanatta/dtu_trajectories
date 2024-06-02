@@ -4,9 +4,9 @@ import numpy as np
 
 
 def generate_sin_points(num_points):
-    t = np.linspace(0, np.pi/4, num_points)
-    x = t*2
-    y = np.sin(8*t)/2
+    t = np.linspace(0, 3/4*np.pi, num_points)
+    x = t
+    y = np.sin(8*t)
     z = np.ones_like(t)
     return x, y, z
 
@@ -51,7 +51,7 @@ def plot_3d_trajectory(x, y, z):
     plt.show()
 
 
-num_points = 50
+num_points = 100
 x, y, z = generate_sin_points(num_points)
 
 plot_2d_trajectory(x, y)

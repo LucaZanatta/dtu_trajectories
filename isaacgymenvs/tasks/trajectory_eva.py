@@ -112,7 +112,6 @@ def trajectory_eva_3(data):
         angle_clip = np.clip(cos_angle, -1, 1)
         angle_rad = np.arccos(angle_clip)
         angle_deg = np.degrees(angle_rad)
-        curvature.append(2 * math.sin(math.radians(angle_deg)) / np.sqrt(norm_vector1**2+norm_vector2**2))
         angles.append(angle_deg)
 
 
@@ -280,21 +279,16 @@ original_numbers.append(m3_line_x)
 original_numbers.append(m3_line_xy)
 original_numbers.append(m3_line_xyz)
 original_numbers.append(m3_circle)
+original_numbers.append(m3_ellipse)
+original_numbers.append(m3_playground)
 original_numbers.append(m3_ouroboros)
 original_numbers.append(m3_ouroboros_z)
 original_numbers.append(m3_ouroboros_plus)
 original_numbers.append(m3_ouroboros_plus_z)
-original_numbers.append(m3_corss)
-original_numbers.append(m3_ellipse)
-original_numbers.append(m3_playground)
-original_numbers.append(m3_retreat)
 original_numbers.append(m3_sin)
 original_numbers.append(m3_spiral_v)
-original_numbers.append(m3_spiral_h)
-original_numbers.append(m3_swirl)
 original_numbers.append(m3_tornado)
-original_numbers.append(m3_wheel)
-original_numbers.append(m3_roll)
+original_numbers.append(m3_swirl)
 print("original_numbers: ", original_numbers)
 
 def scale_to_integer_range(values, new_min, new_max):
@@ -306,7 +300,7 @@ def scale_to_integer_range(values, new_min, new_max):
     ]
     return scaled_values
 
-scaled_values = scale_to_integer_range(original_numbers, 0, 10)
+scaled_values = scale_to_integer_range(original_numbers, 1, 10)
 
 
 # Create a colormap
@@ -347,7 +341,7 @@ plt.bar(range(len(scaled_values)), scaled_values, color=colors)
 plt.xlabel('Trajectory', fontsize=12)
 plt.ylabel('Complexity (Scaled)',fontsize=12)
 plt.title('Complexity of Trajectories')
-plt.xticks(range(len(scaled_values)), ['Line X', 'Line XY', 'Line XYZ', 'Circle', 'Ouroboros', 'Ouroboros_z', 'Ouroboros_plus', 'Ouroboros_plus_z', 'Cross', 'Ellipse', 'Playground', 'Retreat', 'Sin', 'Spiral V', 'Spiral H', 'Swirl', 'Tornado', 'Wheel', 'Roll'], fontsize=10, rotation=30)
+plt.xticks(range(len(scaled_values)), ['Line x', 'Line xy', 'Line xyz', 'Circle', 'Ellipse', 'Playground','Ouroboros', 'Ouroboros z', 'Ouroboros plus', 'Ouroboros plus z', 'Sin', 'Spiral v', 'Tornado','Swirl'], fontsize=10, rotation=30)
 plt.show()
 
 # print("scaled_values: ", scaled_values)

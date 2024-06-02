@@ -75,9 +75,18 @@ class Crazyflie(VecTask):
         self.friction = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device)
         
         # trajectory
-        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_xy.csv')
         # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
-        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros_z.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros_plus.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros_plus_z.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ellipse.csv')
+        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/sin.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/spiral_v.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/swirl.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/tornado.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/playground.csv')
 
         self.trajectory_len = torch.tensor(len(self.trajectory), dtype=torch.int32, device=self.device)
         
@@ -222,25 +231,25 @@ class Crazyflie(VecTask):
         # env_ids is the indices of the envs that need to be reset for target
 
         self.target_index_last[env_ids] += 1
-        self.target_index_last[self.target_index_last > (self.len_of_traj-1)] = 0 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_index_last[self.target_index_last > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
         self.target_pos_last[env_ids,0] = self.x[self.target_index_last[env_ids]]
         self.target_pos_last[env_ids,1] = self.y[self.target_index_last[env_ids]]
         self.target_pos_last[env_ids,2] = self.z[self.target_index_last[env_ids]]
         
         self.target_index[env_ids] += 1
-        self.target_index[self.target_index > (self.len_of_traj-1)] = 0 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_index[self.target_index > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
         self.target_pos[env_ids,0] = self.x[self.target_index[env_ids]]
         self.target_pos[env_ids,1] = self.y[self.target_index[env_ids]]
         self.target_pos[env_ids,2] = self.z[self.target_index[env_ids]]
         
         self.target_index_next[env_ids] += 1
-        self.target_index_next[self.target_index_next > (self.len_of_traj-1)] = 0 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_index_next[self.target_index_next > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
         self.target_pos_next[env_ids,0] = self.x[self.target_index_next[env_ids]]
         self.target_pos_next[env_ids,1] = self.y[self.target_index_next[env_ids]]
         self.target_pos_next[env_ids,2] = self.z[self.target_index_next[env_ids]]
         
         self.target_index_next_next[env_ids] += 1
-        self.target_index_next_next[self.target_index_next_next > (self.len_of_traj-1)] = 0 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_index_next_next[self.target_index_next_next > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
         self.target_pos_next_next[env_ids,0] = self.x[self.target_index_next_next[env_ids]]
         self.target_pos_next_next[env_ids,1] = self.y[self.target_index_next_next[env_ids]]
         self.target_pos_next_next[env_ids,2] = self.z[self.target_index_next_next[env_ids]]
@@ -448,7 +457,6 @@ def compute_crazyflie_reward(trajectory, trajectory_len ,target_index, root_pos_
     #############################################################
     velocity = torch.norm(root_linvels, dim=-1)
     velocity_reward = velocity.clone()
-    
     
     ######################
     # uprightness reward #

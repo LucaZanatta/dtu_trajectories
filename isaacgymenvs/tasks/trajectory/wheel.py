@@ -46,8 +46,8 @@ def plot_3d_trajectory(x, y, z):
     ax.set_zlabel('Z')
     ax.set_title('wheel', fontsize=16)
     ax.legend()
-    # plt.savefig('isaacgymenvs/tasks/trajectory/figure/wheel.png', dpi=600)
-    plt.savefig('figure/wheel.png', dpi=600)
+    plt.savefig('isaacgymenvs/tasks/trajectory/figure/wheel.png', dpi=600)
+    # plt.savefig('figure/wheel.png', dpi=600)
     plt.show()
 
 

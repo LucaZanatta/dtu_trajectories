@@ -410,12 +410,12 @@ def compute_crazyflie_reward(trajectory, trajectory_len ,target_index, root_pos_
     ###################
     # calculate error #
     ###################
-    line_vector = target_pos_last - target_pos
-    line_direction = line_vector / torch.norm(line_vector, dim=-1, keepdim=True)
-    root_to_line_vector = root_positions - target_pos
-    perpendicular_distance = torch.norm(torch.cross(root_to_line_vector, line_direction), dim=-1)
-    perpendicular_distance = perpendicular_distance.unsqueeze(1)
-    write_to_csv(perpendicular_distance, "perpendicular_distance")
+    # line_vector = target_pos_last - target_pos
+    # line_direction = line_vector / torch.norm(line_vector, dim=-1, keepdim=True)
+    # root_to_line_vector = root_positions - target_pos
+    # perpendicular_distance = torch.norm(torch.cross(root_to_line_vector, line_direction), dim=-1)
+    # perpendicular_distance = perpendicular_distance.unsqueeze(1)
+    # write_to_csv(perpendicular_distance, "perpendicular_distance")
 
 
     ###################

@@ -75,8 +75,8 @@ class Crazyflie(VecTask):
         self.friction = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device)
         
         # trajectory
-        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
-        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
+        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
         # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros.csv')
 
         self.trajectory_len = torch.tensor(len(self.trajectory), dtype=torch.int32, device=self.device)

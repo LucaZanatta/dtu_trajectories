@@ -76,8 +76,8 @@ class Crazyflie(VecTask):
         
         # trajectory
         # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/line_x.csv')
-        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
-        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros.csv')
+        # self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/circle.csv')
+        self.trajectory = pd.read_csv('isaacgymenvs/tasks/trajectory/ouroboros.csv')
 
         self.trajectory_len = torch.tensor(len(self.trajectory), dtype=torch.int32, device=self.device)
         
@@ -222,25 +222,25 @@ class Crazyflie(VecTask):
         # env_ids is the indices of the envs that need to be reset for target
 
         self.target_index_last[env_ids] += 1
-        self.target_index_last[self.target_index_last > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_index_last[self.target_index_last > (self.len_of_traj-1)] = 0 # if need drone stay at last traj, change 0 to self.len_of_traj-1
         self.target_pos_last[env_ids,0] = self.x[self.target_index_last[env_ids]]
         self.target_pos_last[env_ids,1] = self.y[self.target_index_last[env_ids]]
         self.target_pos_last[env_ids,2] = self.z[self.target_index_last[env_ids]]
         
         self.target_index[env_ids] += 1
-        self.target_index[self.target_index > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_index[self.target_index > (self.len_of_traj-1)] = 0 # if need drone stay at last traj, change 0 to self.len_of_traj-1
         self.target_pos[env_ids,0] = self.x[self.target_index[env_ids]]
         self.target_pos[env_ids,1] = self.y[self.target_index[env_ids]]
         self.target_pos[env_ids,2] = self.z[self.target_index[env_ids]]
         
         self.target_index_next[env_ids] += 1
-        self.target_index_next[self.target_index_next > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_index_next[self.target_index_next > (self.len_of_traj-1)] = 0 # if need drone stay at last traj, change 0 to self.len_of_traj-1
         self.target_pos_next[env_ids,0] = self.x[self.target_index_next[env_ids]]
         self.target_pos_next[env_ids,1] = self.y[self.target_index_next[env_ids]]
         self.target_pos_next[env_ids,2] = self.z[self.target_index_next[env_ids]]
         
         self.target_index_next_next[env_ids] += 1
-        self.target_index_next_next[self.target_index_next_next > (self.len_of_traj-1)] = self.len_of_traj-1 # if need drone stay at last traj, change 0 to self.len_of_traj-1
+        self.target_index_next_next[self.target_index_next_next > (self.len_of_traj-1)] = 0 # if need drone stay at last traj, change 0 to self.len_of_traj-1
         self.target_pos_next_next[env_ids,0] = self.x[self.target_index_next_next[env_ids]]
         self.target_pos_next_next[env_ids,1] = self.y[self.target_index_next_next[env_ids]]
         self.target_pos_next_next[env_ids,2] = self.z[self.target_index_next_next[env_ids]]
@@ -401,12 +401,12 @@ def compute_crazyflie_reward(trajectory, trajectory_len ,target_index, root_pos_
     ###################
     # calculate error #
     ###################
-    # line_vector = target_pos_last - target_pos
-    # line_direction = line_vector / torch.norm(line_vector, dim=-1, keepdim=True)
-    # root_to_line_vector = root_positions - target_pos
-    # perpendicular_distance = torch.norm(torch.cross(root_to_line_vector, line_direction), dim=-1)
-    # perpendicular_distance = perpendicular_distance.unsqueeze(1)
-    # write_to_csv(perpendicular_distance, "perpendicular_distance")
+    line_vector = target_pos_last - target_pos
+    line_direction = line_vector / torch.norm(line_vector, dim=-1, keepdim=True)
+    root_to_line_vector = root_positions - target_pos
+    perpendicular_distance = torch.norm(torch.cross(root_to_line_vector, line_direction), dim=-1)
+    perpendicular_distance = perpendicular_distance.unsqueeze(1)
+    write_to_csv(perpendicular_distance, "perpendicular_distance")
 
 
     ###################

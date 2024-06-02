@@ -66,17 +66,17 @@ import matplotlib.pyplot as plt
 # plt.show()
 
 
-velocity = pd.read_csv('log/velocity.csv')
-velocity_x = velocity.index
-velocity_y = velocity.iloc[:, 0]
+# velocity = pd.read_csv('log/velocity.csv')
+# velocity_x = velocity.index
+# velocity_y = velocity.iloc[:, 0]
 
 
-plt.plot(velocity_x, velocity_y, label='velocity', color='r')
-plt.xlabel('Steps')
-plt.ylabel('velocity')
-plt.title('velocity over Steps')
-plt.legend()
-plt.show()
+# plt.plot(velocity_x, velocity_y, label='velocity', color='r')
+# plt.xlabel('Steps')
+# plt.ylabel('velocity')
+# plt.title('velocity over Steps')
+# plt.legend()
+# plt.show()
 
 # reward_log = pd.read_csv('log/reward.csv')
 # reward_index = reward_log.index
@@ -118,19 +118,28 @@ plt.show()
 # plt.show()
 
 
-# # Read the data from perpendicular_distance.csv
-# perpendicular_distance_log = pd.read_csv('log/perpendicular_distance.csv')
-# # Extract the x and y values from the data
-# perpendicular_distance_x = perpendicular_distance_log.index
-# perpendicular_distance_y = perpendicular_distance_log.iloc[:, 0]
-# # Plot the line chart
-# plt.plot(perpendicular_distance_x, perpendicular_distance_y, color='b')
-# plt.xlabel('Steps', fontsize=16)
-# plt.ylabel('Error', fontsize=16)
-# plt.title('Error over Steps (measured in meters)', fontsize=18)
-# plt.xticks(fontsize=14)
-# plt.yticks(fontsize=14)
-# plt.show()
-# # Calculate the mean of the perpendicular distance
-# mean_perpendicular_distance = perpendicular_distance_y.mean()
-# print("Mean Perpendicular Distance:", mean_perpendicular_distance)
+# Read the data from perpendicular_distance.csv
+perpendicular_distance_log = pd.read_csv('log/perpendicular_distance.csv')
+# Extract the x and y values from the data
+perpendicular_distance_x = perpendicular_distance_log.index
+perpendicular_distance_y = perpendicular_distance_log.iloc[:, 0]
+# Plot the line chart
+plt.plot(perpendicular_distance_x, perpendicular_distance_y, color='b')
+plt.xlabel('Steps', fontsize=16)
+plt.ylabel('Error', fontsize=16)
+plt.title('Error over Steps (measured in meters)', fontsize=18)
+plt.xticks(fontsize=14)
+plt.yticks(fontsize=14)
+plt.show()
+
+# Calculate the mean and standard deviation of the perpendicular distance
+mean_perpendicular_distance = perpendicular_distance_y.mean()
+std_perpendicular_distance = perpendicular_distance_y.std()
+print("Mean Perpendicular Distance:", mean_perpendicular_distance*100)
+print("Standard Deviation of Perpendicular Distance:", std_perpendicular_distance*100)
+
+# Calculate the maximum and minimum value of the perpendicular distance
+max_perpendicular_distance = perpendicular_distance_y.max()
+min_perpendicular_distance = perpendicular_distance_y.min()
+print("Maximum Perpendicular Distance:", max_perpendicular_distance*100)
+print("Minimum Perpendicular Distance:", min_perpendicular_distance*100)

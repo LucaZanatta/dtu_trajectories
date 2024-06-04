@@ -1,6 +1,6 @@
 This is a README for Project "Reinforcement Learning for Agile Quadrotor Control with CTBR in Isaac Gym".
 
-For trajectory dataset, please check  isaacgymenvs/tasks/trajectory
+For trajectory dataset, please check  ```isaacgymenvs/tasks/trajectory```
 
 For the main code, please check  isaacgymenvs/tasks/crazyflie.py
 
